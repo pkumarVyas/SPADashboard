@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPA Console</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8f9fb; color: #111827; min-height: 100vh; }
+
+    /* ── Header ── */
+    .header {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; white-space: nowrap; }
+    .logo-icon {
+      width: 34px; height: 34px; background: #4f46e5; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { width: 18px; height: 18px; }
+    .search-wrap { flex: 1; max-width: 480px; position: relative; }
+    .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+    .search-wrap input {
+      width: 100%; padding: 8px 14px 8px 34px;
+      border: 1.5px solid #e5e7eb; border-radius: 8px;
+      font-size: 0.875rem; outline: none; background: #f9fafb; color: #111;
+    }
+    .search-wrap input:focus { border-color: #6366f1; background: white; }
+    .header-actions { display: flex; gap: 8px; margin-left: auto; }
+    .btn-outline {
+      padding: 7px 14px; border: 1.5px solid #d1d5db; border-radius: 8px;
+      background: white; font-size: 0.85rem; cursor: pointer; color: #374151;
+      font-weight: 500; display: flex; align-items: center; gap: 5px;
+    }
+    .btn-outline:hover { border-color: #6366f1; color: #6366f1; }
+    .btn-primary {
+      padding: 7px 16px; background: #111827; color: white; border: none;
+      border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-primary:hover { background: #1f2937; }
+
+    /* ── Nav ── */
+    .nav {
+      background: white; border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px; display: flex; gap: 2px; overflow-x: auto;
+    }
+    .nav-tab {
+      padding: 14px 15px; border: none; background: transparent;
+      font-size: 0.875rem; color: #6b7280; cursor: pointer;
+      border-bottom: 2px solid transparent; white-space: nowrap;
+      font-weight: 500; transition: color 0.15s;
+    }
+    .nav-tab.active {
+      background: #111827; color: white; border-radius: 20px;
+      border-bottom: none; margin: 8px 2px; padding: 6px 14px;
+    }
+    .nav-tab:not(.active):hover { color: #111827; }
+
+    /* ── Layout ── */
+    .main { padding: 28px 24px; max-width: 1180px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Section head ── */
+    .section-head { margin-bottom: 18px; }
+    .section-head h2 { font-size: 1.4rem; font-weight: 700; }
+    .section-head p { color: #6b7280; font-size: 0.875rem; margin-top: 5px; line-height: 1.5; }
+    .section-actions { display: flex; gap: 10px; margin-bottom: 22px; }
+    .btn-sec {
+      padding: 8px 18px; border: 1.5px solid #d1d5db; border-radius: 8px;
+      background: white; font-size: 0.875rem; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 7px;
+    }
+    .btn-sec-dark {
+      padding: 8px 18px; background: #111827; color: white; border: none;
+      border-radius: 8px; font-size: 0.875rem; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 7px;
+    }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px; margin-bottom: 26px;
+    }
+    .stat-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; }
+    .stat-label { font-size: 0.78rem; color: #6b7280; margin-bottom: 8px; }
+    .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+    .stat-value.sm { font-size: 1.5rem; }
+    .stat-sub { font-size: 0.78rem; }
+    .c-green { color: #16a34a; }
+    .c-orange { color: #d97706; }
+    .c-purple { color: #7c3aed; }
+    .c-gray { color: #9ca3af; }
+    .c-red { color: #dc2626; }
+
+    /* ── Dot status ── */
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot.green { background: #22c55e; }
+    .dot.orange { background: #f59e0b; }
+    .dot.red { background: #ef4444; }
+
+    /* ── Import channels ── */
+    .box { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .box-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .box-head h3 { font-size: 0.95rem; font-weight: 600; }
+    .link { font-size: 0.8rem; color: #6366f1; cursor: pointer; }
+    .box-sub { font-size: 0.8rem; color: #6b7280; margin-bottom: 16px; line-height: 1.5; }
+    .channel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .channel-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 13px 15px; display: flex; align-items: center; gap: 12px; }
+    .ch-icon {
+      width: 38px; height: 38px; background: #f3f4f6; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
+    }
+    .ch-info { flex: 1; min-width: 0; }
+    .ch-name { font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .ch-detail { font-size: 0.75rem; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ch-count { text-align: right; flex-shrink: 0; }
+    .ch-count-num { font-size: 1.1rem; font-weight: 700; }
+    .ch-count-label { font-size: 0.7rem; color: #9ca3af; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed #d1d5db; border-radius: 12px; padding: 44px 20px;
+      text-align: center; background: white; margin-top: 16px;
+    }
+    .drop-icon {
+      width: 58px; height: 58px; background: #ede9fe; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+    }
+    .drop-zone h3 { font-size: 1rem; font-weight: 600; margin-bottom: 7px; }
+    .drop-zone p { font-size: 0.8rem; color: #6b7280; margin-bottom: 16px; }
+    .btn-browse {
+      padding: 10px 26px; background: #111827; color: white; border: none;
+      border-radius: 8px; font-size: 0.875rem; cursor: pointer; font-weight: 500;
+    }
+    .ai-badge { font-size: 0.75rem; color: #7c3aed; display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 12px; }
+
+    /* ── Sub tabs ── */
+    .sub-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .sub-tab {
+      padding: 5px 14px; border: 1.5px solid #e5e7eb; border-radius: 20px;
+      background: white; font-size: 0.8rem; cursor: pointer; font-weight: 500; color: #6b7280;
+    }
+    .sub-tab.active { background: #111827; color: white; border-color: #111827; }
+
+    /* ── Data table ── */
+    .table-wrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; }
+    .data-table th {
+      padding: 10px 14px; text-align: left; font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280;
+      background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+    }
+    .data-table td { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #fafafa; }
+    .po-id { font-weight: 700; }
+    .spa-link { color: #6366f1; font-weight: 500; cursor: pointer; }
+    .spa-link:hover { text-decoration: underline; }
+    .reason-text { font-size: 0.78rem; color: #6b7280; max-width: 160px; }
+
+    /* Confidence */
+    .conf-wrap { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .conf-track { width: 56px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+    .conf-fill { height: 100%; border-radius: 3px; }
+    .conf-fill.high { background: #22c55e; }
+    .conf-fill.med  { background: #f59e0b; }
+    .conf-fill.low  { background: #ef4444; }
+
+    /* Action buttons */
+    .act-btn { padding: 5px 13px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border: none; }
+    .act-apply  { background: #dcfce7; color: #15803d; }
+    .act-review { background: #fef9c3; color: #92400e; }
+
+    /* ── Quota cards ── */
+    .quota-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; }
+    .quota-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .quota-id { font-weight: 700; font-size: 0.95rem; }
+    .quota-parties { font-size: 0.85rem; color: #6b7280; margin-left: 10px; }
+    .quota-right { display: flex; align-items: center; gap: 12px; }
+    .quota-expiry { font-size: 0.8rem; color: #6b7280; }
+    .quota-bar-row { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+    .quota-track { flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .quota-fill { height: 100%; border-radius: 4px; }
+    .quota-fill.orange { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .quota-fill.red    { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .quota-pct { font-weight: 700; font-size: 0.9rem; width: 38px; text-align: right; }
+    .quota-meta { display: flex; justify-content: space-between; font-size: 0.8rem; color: #6b7280; }
+    .quota-value { font-weight: 600; color: #111827; }
+    .btn-req { padding: 6px 13px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-req.orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .btn-req.red    { background: #ef4444; color: white; border: none; }
+
+    /* ── Claims chart ── */
+    .chart-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .chart-title { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .chart-sub { font-size: 0.78rem; color: #6b7280; margin-bottom: 12px; }
+    .legend { display: flex; gap: 16px; margin-bottom: 14px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #6b7280; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+    /* ── Aging buckets ── */
+    .aging-table { width: 100%; border-collapse: collapse; }
+    .aging-table td { padding: 9px 0; font-size: 0.875rem; vertical-align: middle; }
+    .aging-track { background: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden; }
+    .aging-fill { height: 100%; border-radius: 4px; }
+    .aging-fill.low  { background: #bbf7d0; }
+    .aging-fill.med  { background: #fde68a; }
+    .aging-fill.high { background: #fca5a5; }
+    .aging-fill.crit { background: #ef4444; }
+
+    /* ── Responsive ── */
+    @media (max-width: 680px) {
+      .channel-grid { grid-template-columns: 1fr; }
+      .header { flex-wrap: wrap; }
+      .search-wrap { order: 3; max-width: 100%; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    </div>
+    SPA Console
+  </div>
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" placeholder="Search SPAs, POs, customers, vendors..." />
+  </div>
+  <div class="header-actions">
+    <button class="btn-outline">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Filters
+    </button>
+    <button class="btn-outline">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button class="btn-primary">+ New SPA</button>
+  </div>
+</header>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav class="nav">
+  <button class="nav-tab active" onclick="switchTab('imports',this)">SPA Imports</button>
+  <button class="nav-tab"        onclick="switchTab('overview',this)">Overview</button>
+  <button class="nav-tab"        onclick="switchTab('retro',this)">Retroactive Links</button>
+  <button class="nav-tab"        onclick="switchTab('quota',this)">Quota Watch</button>
+  <button class="nav-tab"        onclick="switchTab('claims',this)">Claims &amp; Payments</button>
+  <button class="nav-tab"        onclick="switchTab('repo',this)">SPA Repository</button>
+  <button class="nav-tab"        onclick="switchTab('sync',this)">Sync Health</button>
+</nav>
+
+<div class="main">
+
+  <!-- ═══════════════ SPA IMPORTS ═══════════════ -->
+  <div id="tab-imports" class="tab-panel active">
+    <div class="section-head">
+      <h2>SPA Imports</h2>
+      <p>Every way an SPA enters the system — portals, email, EDI, SFTP, manual upload — with live parse, validation, and ingestion status.</p>
+    </div>
+    <div class="section-actions">
+      <button class="btn-sec">⇌ Connect channel</button>
+      <button class="btn-sec-dark">↑ Upload SPA</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Imported today</div>
+        <div class="stat-value">47</div>
+        <div class="stat-sub c-green">+18% vs avg</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">In pipeline</div>
+        <div class="stat-value">21</div>
+        <div class="stat-sub c-purple">Across 5 stages</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Awaiting review</div>
+        <div class="stat-value">18</div>
+        <div class="stat-sub c-orange">6 OCR · 7 mapping · 5 dup</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Auto-ingested 24h</div>
+        <div class="stat-value">89%</div>
+        <div class="stat-sub c-green">Target ≥ 85%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg time-to-ingest</div>
+        <div class="stat-value">3.4 min</div>
+        <div class="stat-sub c-gray">P95: 12 min</div>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-head">
+        <h3>Active import channels</h3>
+        <span class="link">Manage all →</span>
+      </div>
+      <div class="box-sub">Every source SPAs can come from. One channel down means SPAs are silently piling up somewhere.</div>
+      <div class="channel-grid">
+        <div class="channel-card">
+          <div class="ch-icon">⇌</div>
+          <div class="ch-info">
+            <div class="ch-name"><span class="dot green"></span> Vendor portals (API)</div>
+            <div class="ch-detail">Schneider, ABB, Siemens, Eaton, Rockwell</div>
+          </div>
+          <div class="ch-count"><div class="ch-count-num">5</div><div class="ch-count-label">connected</div></div>
+        </div>
+        <div class="channel-card">
+          <div class="ch-icon">✉</div>
+          <div class="ch-info">
+            <div class="ch-name"><span class="dot green"></span> Email intake</div>
+            <div class="ch-detail">spa-intake@yourco.com · 14 today</div>
+          </div>
+          <div class="ch-count"><div class="ch-count-num">1</div><div class="ch-count-label">connected</div></div>
+        </div>
+        <div class="channel-card">
+          <div class="ch-icon">↑</div>
+          <div class="ch-info">
+            <div class="ch-name"><span class="dot green"></span> Manual upload</div>
+            <div class="ch-detail">PDF, XLSX, CSV · drag-drop below</div>
+          </div>
+          <div class="ch-count"><div class="ch-count-num">1</div><div class="ch-count-label">connected</div></div>
+        </div>
+        <div class="channel-card">
+          <div class="ch-icon">⇄</div>
+          <div class="ch-info">
+            <div class="ch-name"><span class="dot green"></span> EDI feed (832/845)</div>
+            <div class="ch-detail">Eaton, Rockwell · nightly batch</div>
+          </div>
+          <div class="ch-count"><div class="ch-count-num">2</div><div class="ch-count-label">connected</div></div>
+        </div>
+        <div class="channel-card">
+          <div class="ch-icon">📁</div>
+          <div class="ch-info">
+            <div class="ch-name"><span class="dot orange"></span> SFTP / SharePoint</div>
+            <div class="ch-detail">1 folder unreachable since 4 h</div>
+          </div>
+          <div class="ch-count"><div class="ch-count-num">3</div><div class="ch-count-label">connected</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drop-zone">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <h3>Drop SPAs to import</h3>
+      <p>PDF, DOCX, XLSX, CSV, EDI 832/845. We'll OCR, extract<br>terms, and route to validation.</p>
+      <button class="btn-browse">Browse files</button>
+      <div class="ai-badge">✦ AI extraction enabled</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ OVERVIEW ═══════════════ -->
+  <div id="tab-overview" class="tab-panel">
+    <div class="section-head">
+      <h2>Overview</h2>
+      <p>High-level SPA program health across all vendors and customers.</p>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active SPAs</div>
+        <div class="stat-value">312</div>
+        <div class="stat-sub c-green">+4 this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Expiring in 30 d</div>
+        <div class="stat-value">14</div>
+        <div class="stat-sub c-orange">Action needed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vendors covered</div>
+        <div class="stat-value">38</div>
+        <div class="stat-sub c-gray">of 42 approved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total SPA value</div>
+        <div class="stat-value">$8.4M</div>
+        <div class="stat-sub c-green">+12% YoY</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg SPA duration</div>
+        <div class="stat-value">14 mo</div>
+        <div class="stat-sub c-gray">Median</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ RETROACTIVE LINKS ═══════════════ -->
+  <div id="tab-retro" class="tab-panel">
+    <div class="section-head">
+      <h2>Retroactive Linking</h2>
+      <p>Orders eligible for an SPA where the SPA was created later, customer aliasing changed, or back-dated approval applies.</p>
+    </div>
+    <div class="section-actions">
+      <button class="btn-sec">Bulk apply auto-match</button>
+      <button class="btn-sec-dark">Run match engine</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Eligible orders found</div>
+        <div class="stat-value">47</div>
+        <div class="stat-sub c-orange">Last 30 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total recoverable</div>
+        <div class="stat-value">$284K</div>
+        <div class="stat-sub c-gray">Avg $6,043 / order</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Auto-matchable</div>
+        <div class="stat-value">31 / 47</div>
+        <div class="stat-sub c-green">Confidence &gt; 90%</div>
+      </div>
+    </div>
+
+    <div class="sub-tabs">
+      <button class="sub-tab active" onclick="subTab(this)">All 6</button>
+      <button class="sub-tab"       onclick="subTab(this)">Auto-match 3</button>
+      <button class="sub-tab"       onclick="subTab(this)">Needs review 3</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>PO</th><th>Customer</th><th>Vendor</th><th>SKU</th>
+            <th>Qty</th><th>Value</th><th>Eligible SPA</th><th>Reason</th>
+            <th>Confidence</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="po-id">PO-88421</span></td>
+            <td>Acme Industrial</td><td>Schneider</td>
+            <td style="font-size:.78rem;color:#374151">SE-CB-200A</td>
+            <td>45</td><td><strong>$18,420</strong></td>
+            <td><span class="spa-link">SPA-2024-1180</span></td>
+            <td><span class="reason-text">SPA created 3 days after PO</span></td>
+            <td><div class="conf-wrap"><div class="conf-track"><div class="conf-fill high" style="width:98%"></div></div><span>98%</span></div></td>
+            <td><button class="act-btn act-apply">Apply</button></td>
+          </tr>
+          <tr>
+            <td><span class="po-id">PO-88107</span></td>
+            <td>Northwind Eng.</td><td>ABB</td>
+            <td style="font-size:.78rem;color:#374151">ABB-MOT-75K</td>
+            <td>12</td><td><strong>$42,600</strong></td>
+            <td><span class="spa-link">SPA-2024-0993</span></td>
+            <td><span class="reason-text">Customer alias not mapped</span></td>
+            <td><div class="conf-wrap"><div class="conf-track"><div class="conf-fill med" style="width:76%"></div></div><span>76%</span></div></td>
+            <td><button class="act-btn act-review">Review</button></td>
+          </tr>
+          <tr>
+            <td><span class="po-id">PO-87922</span></td>
+            <td>Pioneer MFG</td><td>Siemens</td>
+            <td style="font-size:.78rem;color:#374151">S-DRV-15A</td>
+            <td>200</td><td><strong>$51,200</strong></td>
+            <td><span class="spa-link">SPA-2024-1077</span></td>
+            <td><span class="reason-text">Backdated SPA approval</span></td>
+            <td><div class="conf-wrap"><div class="conf-track"><div class="conf-fill high" style="width:95%"></div></div><span>95%</span></div></td>
+            <td><button class="act-btn act-apply">Apply</button></td>
+          </tr>
+          <tr>
+            <td><span class="po-id">PO-87841</span></td>
+            <td>Coastal Power</td><td>Eaton</td>
+            <td style="font-size:.78rem;color:#374151">ET-XFR-500</td>
+            <td>6</td><td><strong>$88,400</strong></td>
+            <td><span class="spa-link">SPA-2024-1201</span></td>
+            <td><span class="reason-text">End-customer pass-through</span></td>
+            <td><div class="conf-wrap"><div class="conf-track"><div class="conf-fill low" style="width:64%"></div></div><span>64%</span></div></td>
+            <td><button class="act-btn act-review">Review</button></td>
+          </tr>
+          <tr>
+            <td><span class="po-id">PO-87655</span></td>
+            <td>Acme Industrial</td><td>Schneider</td>
+            <td style="font-size:.78rem;color:#374151">SE-PLC-M580</td>
+            <td>18</td><td><strong>$27,300</strong></td>
+            <td><span class="spa-link">SPA-2024-1180</span></td>
+            <td><span class="reason-text">SPA created 12 days after PO</span></td>
+            <td><div class="conf-wrap"><div class="conf-track"><div class="conf-fill high" style="width:99%"></div></div><span>99%</span></div></td>
+            <td><button class="act-btn act-apply">Apply</button></td>
+          </tr>
+          <tr>
+            <td><span class="po-id">PO-87521</span></td>
+            <td>Delta Systems</td><td>Rockwell</td>
+            <td style="font-size:.78rem;color:#374151">RW-1756</td>
+            <td>22</td><td><strong>$64,200</strong></td>
+            <td><span class="spa-link">SPA-2024-1034</span></td>
+            <td><span class="reason-text">Subsidiary not linked</span></td>
+            <td><div class="conf-wrap"><div class="conf-track"><div class="conf-fill low" style="width:58%"></div></div><span>58%</span></div></td>
+            <td><button class="act-btn act-review">Review</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ QUOTA WATCH ═══════════════ -->
+  <div id="tab-quota" class="tab-panel">
+    <div class="section-head">
+      <h2>SPAs at risk</h2>
+      <p>Sorted by % consumed — flag any &gt;90% with &gt;30 days remaining.</p>
+    </div>
+
+    <div class="quota-card">
+      <div class="quota-top">
+        <div><span class="quota-id">SPA-2024-0881</span><span class="quota-parties">Schneider · Acme Industrial</span></div>
+        <div class="quota-right">
+          <span class="quota-expiry">Expires 2025-08-15</span>
+          <button class="btn-req orange">Request increase</button>
+        </div>
+      </div>
+      <div class="quota-bar-row">
+        <div class="quota-track"><div class="quota-fill orange" style="width:94%"></div></div>
+        <span class="quota-pct c-orange">94%</span>
+      </div>
+      <div class="quota-meta"><span>9,420 / 10,000 units</span><span class="quota-value">SPA value $312K</span></div>
+    </div>
+
+    <div class="quota-card">
+      <div class="quota-top">
+        <div><span class="quota-id">SPA-2024-1042</span><span class="quota-parties">ABB · Northwind Eng.</span></div>
+        <div class="quota-right">
+          <span class="quota-expiry">Expires 2025-09-30</span>
+          <button class="btn-req red">Request increase</button>
+        </div>
+      </div>
+      <div class="quota-bar-row">
+        <div class="quota-track"><div class="quota-fill red" style="width:95%"></div></div>
+        <span class="quota-pct c-red">95%</span>
+      </div>
+      <div class="quota-meta"><span>4,750 / 5,000 units</span><span class="quota-value">SPA value $198K</span></div>
+    </div>
+
+    <div class="quota-card">
+      <div class="quota-top">
+        <div><span class="quota-id">SPA-2024-0712</span><span class="quota-parties">Siemens · Pioneer MFG</span></div>
+        <div class="quota-right">
+          <span class="quota-expiry">Expires 2025-07-22</span>
+          <button class="btn-req orange">Request increase</button>
+        </div>
+      </div>
+      <div class="quota-bar-row">
+        <div class="quota-track"><div class="quota-fill orange" style="width:88%"></div></div>
+        <span class="quota-pct c-orange">88%</span>
+      </div>
+      <div class="quota-meta"><span>880 / 1,000 units</span><span class="quota-value">SPA value $144K</span></div>
+    </div>
+
+    <div class="quota-card">
+      <div class="quota-top">
+        <div><span class="quota-id">SPA-2024-1180</span><span class="quota-parties">Schneider · Acme Industrial</span></div>
+        <div class="quota-right">
+          <span class="quota-expiry">Expires 2025-12-31</span>
+          <button class="btn-req orange">Request increase</button>
+        </div>
+      </div>
+      <div class="quota-bar-row">
+        <div class="quota-track"><div class="quota-fill orange" style="width:90%"></div></div>
+        <span class="quota-pct c-orange">90%</span>
+      </div>
+      <div class="quota-meta"><span>2,710 / 3,000 units</span><span class="quota-value">SPA value $89K</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CLAIMS & PAYMENTS ═══════════════ -->
+  <div id="tab-claims" class="tab-panel">
+    <div class="section-head">
+      <h2>Claims &amp; Payments</h2>
+      <p>Submitted, approved, paid, and disputed rebate claims across vendors.</p>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Submitted MTD</div>
+        <div class="stat-value">$1.34M</div>
+        <div class="stat-sub c-green">+8.1% vs Apr</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Paid MTD</div>
+        <div class="stat-value">$1.08M</div>
+        <div class="stat-sub c-green">80.5% pay rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Disputed</div>
+        <div class="stat-value">$88K</div>
+        <div class="stat-sub c-orange">6.5% of submitted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg days to pay</div>
+        <div class="stat-value">34 d</div>
+        <div class="stat-sub c-purple">Eaton fastest @ 21d</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Claims trend</div>
+      <div class="chart-sub">Volume over the last 7 months ($ thousands)</div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#6366f1"></span> Submitted</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Paid</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Disputed</span>
+      </div>
+      <svg id="claims-chart" viewBox="0 0 700 190" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Aging buckets</div>
+      <div class="chart-sub">Outstanding claim count &amp; $K</div>
+      <table class="aging-table">
+        <tr>
+          <td style="width:60px;font-size:.8rem;color:#6b7280">0–30 d</td>
+          <td style="width:55%"><div class="aging-track"><div class="aging-fill low" style="width:92%"></div></div></td>
+          <td style="padding-left:14px;font-size:.8rem;color:#6b7280">142 claims</td>
+          <td style="text-align:right;font-weight:600;padding-left:16px">$480K</td>
+        </tr>
+        <tr>
+          <td style="font-size:.8rem;color:#6b7280">31–60 d</td>
+          <td><div class="aging-track"><div class="aging-fill med" style="width:62%"></div></div></td>
+          <td style="padding-left:14px;font-size:.8rem;color:#6b7280">88 claims</td>
+          <td style="text-align:right;font-weight:600;padding-left:16px">$312K</td>
+        </tr>
+        <tr>
+          <td style="font-size:.8rem;color:#6b7280">61–90 d</td>
+          <td><div class="aging-track"><div class="aging-fill high" style="width:28%"></div></div></td>
+          <td style="padding-left:14px;font-size:.8rem;color:#6b7280">34 claims</td>
+          <td style="text-align:right;font-weight:600;padding-left:16px">$127K</td>
+        </tr>
+        <tr>
+          <td style="font-size:.8rem;color:#dc2626">90+ d</td>
+          <td><div class="aging-track"><div class="aging-fill crit" style="width:10%"></div></div></td>
+          <td style="padding-left:14px;font-size:.8rem;color:#6b7280">11 claims</td>
+          <td style="text-align:right;font-weight:600;padding-left:16px;color:#dc2626">$44K</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SPA REPOSITORY ═══════════════ -->
+  <div id="tab-repo" class="tab-panel">
+    <div class="section-head">
+      <h2>SPA Repository</h2>
+      <p>All active, expiring, draft, and expired SPAs across all vendors and customers.</p>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active</div>
+        <div class="stat-value">312</div>
+        <div class="stat-sub c-green">Current</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Expiring 30 d</div>
+        <div class="stat-value">14</div>
+        <div class="stat-sub c-orange">Renew soon</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Draft</div>
+        <div class="stat-value">8</div>
+        <div class="stat-sub c-gray">Pending approval</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Expired (90 d)</div>
+        <div class="stat-value">47</div>
+        <div class="stat-sub c-gray">Archivable</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>SPA ID</th><th>Name</th><th>Vendor</th><th>Customer</th><th>Effective</th><th>Expiry</th><th>Value</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="spa-link">SPA-2024-1180</span></td>
+            <td>Q3 Distributor Price</td><td>Schneider</td><td>Acme Industrial</td>
+            <td>2024-07-01</td><td>2025-12-31</td><td><strong>$312K</strong></td>
+            <td><span style="color:#16a34a;font-weight:600;font-size:.78rem">● Active</span></td>
+          </tr>
+          <tr>
+            <td><span class="spa-link">SPA-2024-1042</span></td>
+            <td>Motor Drive Agreement</td><td>ABB</td><td>Northwind Eng.</td>
+            <td>2024-03-15</td><td>2025-09-30</td><td><strong>$198K</strong></td>
+            <td><span style="color:#d97706;font-weight:600;font-size:.78rem">● Expiring</span></td>
+          </tr>
+          <tr>
+            <td><span class="spa-link">SPA-2024-0881</span></td>
+            <td>Industrial Controls SPA</td><td>Schneider</td><td>Acme Industrial</td>
+            <td>2024-01-01</td><td>2025-08-15</td><td><strong>$89K</strong></td>
+            <td><span style="color:#d97706;font-weight:600;font-size:.78rem">● Expiring</span></td>
+          </tr>
+          <tr>
+            <td><span class="spa-link">SPA-2024-0712</span></td>
+            <td>Drive Systems Rebate</td><td>Siemens</td><td>Pioneer MFG</td>
+            <td>2024-01-15</td><td>2025-07-22</td><td><strong>$144K</strong></td>
+            <td><span style="color:#d97706;font-weight:600;font-size:.78rem">● Expiring</span></td>
+          </tr>
+          <tr>
+            <td><span class="spa-link">SPA-2023-0441</span></td>
+            <td>Annual Transformer Deal</td><td>Eaton</td><td>Coastal Power</td>
+            <td>2023-06-01</td><td>2024-12-31</td><td><strong>$221K</strong></td>
+            <td><span style="color:#9ca3af;font-weight:600;font-size:.78rem">● Expired</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SYNC HEALTH ═══════════════ -->
+  <div id="tab-sync" class="tab-panel">
+    <div class="section-head">
+      <h2>Sync Health</h2>
+      <p>D365 F&amp;O sync status — last run, errors, and queue depth across all SPA write-back jobs.</p>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Last sync</div>
+        <div class="stat-value sm">2 min ago</div>
+        <div class="stat-sub c-green">On schedule</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sync errors (24h)</div>
+        <div class="stat-value">3</div>
+        <div class="stat-sub c-orange">2 retrying</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Queue depth</div>
+        <div class="stat-value">0</div>
+        <div class="stat-sub c-green">All clear</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg sync time</div>
+        <div class="stat-value">1.2 s</div>
+        <div class="stat-sub c-gray">Per SPA record</div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><h3>Recent sync events</h3></div>
+      <table class="data-table" style="margin-top:12px">
+        <thead><tr><th>Time</th><th>SPA</th><th>Operation</th><th>Status</th><th>Duration</th></tr></thead>
+        <tbody>
+          <tr>
+            <td style="font-size:.78rem;color:#6b7280">12:41 PM</td>
+            <td><span class="spa-link">SPA-2024-1180</span></td><td>CreateSPA</td>
+            <td><span style="color:#16a34a;font-weight:600;font-size:.78rem">✓ Success</span></td><td>0.9 s</td>
+          </tr>
+          <tr>
+            <td style="font-size:.78rem;color:#6b7280">12:38 PM</td>
+            <td><span class="spa-link">SPA-2024-0993</span></td><td>UpdatePricing</td>
+            <td><span style="color:#dc2626;font-weight:600;font-size:.78rem">✗ Error</span></td><td>—</td>
+          </tr>
+          <tr>
+            <td style="font-size:.78rem;color:#6b7280">12:35 PM</td>
+            <td><span class="spa-link">SPA-2024-1042</span></td><td>CreateSPA</td>
+            <td><span style="color:#16a34a;font-weight:600;font-size:.78rem">✓ Success</span></td><td>1.4 s</td>
+          </tr>
+          <tr>
+            <td style="font-size:.78rem;color:#6b7280">12:31 PM</td>
+            <td><span class="spa-link">SPA-2024-1201</span></td><td>CreateSPA</td>
+            <td><span style="color:#d97706;font-weight:600;font-size:.78rem">↻ Retrying</span></td><td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function subTab(btn) {
+    btn.closest('.sub-tabs').querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // SVG bar chart for Claims trend
+  (function () {
+    const months = ['Nov','Dec','Jan','Feb','Mar','Apr','May'];
+    const data   = [
+      [760, 710, 55],
+      [870, 770, 90],
+      [1055, 1050, 128],
+      [1045, 785, 88],
+      [1200, 1005, 135],
+      [1300, 1075, 162],
+      [1400, 1110, 130]
+    ];
+    const colors = ['#6366f1','#22c55e','#ef4444'];
+    const W = 700, H = 190;
+    const pl = 44, pr = 10, pt = 8, pb = 28;
+    const cW = W - pl - pr, cH = H - pt - pb;
+    const maxV = 1450;
+    const gW = cW / months.length;
+    const bW = 12, gap = 2;
+    const offsets = [-(bW + gap), 0, bW + gap];
+
+    let s = '';
+    // Y grid + labels
+    [0, 350, 700, 1050, 1400].forEach(v => {
+      const y = pt + cH - (v / maxV) * cH;
+      s += `<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" stroke="#f3f4f6" stroke-width="1"/>`;
+      s += `<text x="${pl-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#9ca3af">${v}</text>`;
+    });
+    // Bars + month labels
+    data.forEach((row, i) => {
+      const cx = pl + i * gW + gW / 2;
+      row.forEach((val, ki) => {
+        const bH = (val / maxV) * cH;
+        const x = cx + offsets[ki] - bW / 2;
+        const y = pt + cH - bH;
+        s += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bH.toFixed(1)}" fill="${colors[ki]}" rx="2"/>`;
+      });
+      s += `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="#9ca3af">${months[i]}</text>`;
+    });
+    document.getElementById('claims-chart').innerHTML = s;
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "spa-creator-proxy",
+  "version": "1.0.0",
+  "description": "Azure Function proxy for D365 SPA creation",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/service-bus": "^7.9.0"
+  }
+}
