@@ -1,5 +1,5 @@
 const MOCK            = import.meta.env.VITE_MOCK === 'true';
-const CLAIMS_DATA_URL = import.meta.env.VITE_CLAIMS_DATA_URL;
+const CLAIMS_DATA_URL = import.meta.env.VITE_CLAIMS_DATA_URL || '/api/GetClaimsData';
 
 export async function getClaimsData() {
   if (MOCK) {

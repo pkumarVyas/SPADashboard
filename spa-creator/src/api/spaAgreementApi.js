@@ -1,8 +1,8 @@
 import { spaAgreements, spaAgreementLines } from '../data/mockData';
 
 const MOCK             = import.meta.env.VITE_MOCK === 'true';
-const SPA_AGMT_URL     = import.meta.env.VITE_SPA_AGREEMENTS_URL;
-const SPA_AGMT_LN_URL  = import.meta.env.VITE_SPA_AGREEMENT_LINES_URL;
+const SPA_AGMT_URL     = import.meta.env.VITE_SPA_AGREEMENTS_URL      || '/api/GetSPAAgreements';
+const SPA_AGMT_LN_URL  = import.meta.env.VITE_SPA_AGREEMENT_LINES_URL || '/api/GetSPAAgreementLines';
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));

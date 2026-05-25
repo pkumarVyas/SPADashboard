@@ -1,7 +1,7 @@
 const MOCK                 = import.meta.env.VITE_MOCK === 'true';
-const SPA_IMPORTS_URL      = import.meta.env.VITE_SPA_IMPORTS_URL;
-const SPA_IMPORT_LINES_URL = import.meta.env.VITE_SPA_IMPORT_LINES_URL;
-const SUBMIT_SPA_URL       = import.meta.env.VITE_SUBMIT_SPA_URL;
+const SPA_IMPORTS_URL      = import.meta.env.VITE_SPA_IMPORTS_URL      || '/api/GetSPAImports';
+const SPA_IMPORT_LINES_URL = import.meta.env.VITE_SPA_IMPORT_LINES_URL || '/api/GetSPAImportLines';
+const SUBMIT_SPA_URL       = import.meta.env.VITE_SUBMIT_SPA_URL       || '/api/SubmitSPAToD365';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 

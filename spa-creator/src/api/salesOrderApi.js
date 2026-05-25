@@ -1,8 +1,8 @@
 import { salesOrders } from '../data/mockData';
 
 const MOCK                   = import.meta.env.VITE_MOCK === 'true';
-const SALES_ORDER_URL        = import.meta.env.VITE_SALES_ORDERS_URL;
-const SALES_ORDER_LINES_URL  = import.meta.env.VITE_SALES_ORDER_LINES_URL;
+const SALES_ORDER_URL        = import.meta.env.VITE_SALES_ORDERS_URL      || '/api/GetSalesOrders';
+const SALES_ORDER_LINES_URL  = import.meta.env.VITE_SALES_ORDER_LINES_URL || '/api/GetSalesOrderLines';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
