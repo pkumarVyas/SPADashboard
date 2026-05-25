@@ -76,7 +76,8 @@ module.exports = async function (context, req) {
 
   try {
     const token = await getDataverseToken();
-    const { DATAVERSE_API_URL, DATAVERSE_SPA_HEADER_TABLE, DATAVERSE_COMPANY_ID = 'USMF' } = process.env;
+    const { DATAVERSE_API_URL, DATAVERSE_COMPANY_ID = 'USMF' } = process.env;
+    const DATAVERSE_SPA_HEADER_TABLE = process.env.DATAVERSE_SPA_HEADER_TABLE ?? 'mserp_vysspaheaderdataentities';
 
     const top    = Math.min(parseInt(req.query.top ?? '100', 10), 500);
     const search = (req.query.filter ?? '').trim();
