@@ -7,17 +7,22 @@ async function getDataverseToken() {
     return cache.token;
   }
 
-  const { TENANT_ID, CLIENT_ID, CLIENT_SECRET, DATAVERSE_RESOURCE } = process.env;
+  const tenantId     = process.env.DATAVERSE_TENANT_ID  || process.env.TENANT_ID;
+  const clientId     = process.env.DATAVERSE_CLIENT_ID  || process.env.CLIENT_ID;
+  const clientSecret = process.env.DATAVERSE_CLIENT_SECRET || process.env.CLIENT_SECRET;
+  // Derive resource (base org URL) from DATAVERSE_API_URL or fall back to DATAVERSE_RESOURCE
+  const apiUrl   = process.env.DATAVERSE_API_URL || '';
+  const resource = process.env.DATAVERSE_RESOURCE || apiUrl.replace(/\/api\/data\/.*$/, '');
 
   const body = new URLSearchParams({
     grant_type:    'client_credentials',
-    client_id:     CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    resource:      DATAVERSE_RESOURCE   // e.g. https://your-org.crm.dynamics.com
+    client_id:     clientId,
+    client_secret: clientSecret,
+    resource,
   });
 
   const res = await fetch(
-    `https://login.microsoftonline.com/${TENANT_ID}/oauth2/token`,
+    `https://login.microsoftonline.com/${tenantId}/oauth2/token`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
