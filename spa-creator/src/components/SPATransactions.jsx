@@ -1,40 +1,35 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSalesOrders } from '../api/salesOrderApi';
-import SalesOrderDetail from './SalesOrderDetail';
+import { getSPATransactions } from '../api/spaTransactionApi';
 
 const STATUS_STYLE = {
-  'Open order': { label: 'Open',     bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  'Invoiced':   { label: 'Invoiced', bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  'Delivered':  { label: 'Linked',   bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  'Cancelled':  { label: 'Failed',   bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+  Linked:   { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  Invoiced: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  Failed:   { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
 };
 
 function StatusBadge({ status }) {
-  const s = STATUS_STYLE[status] ?? { label: status || '—', bg: '#f3f4f6', color: '#6b7280', border: '#e5e7eb' };
+  const s = STATUS_STYLE[status] ?? { bg: '#f3f4f6', color: '#6b7280', border: '#e5e7eb' };
   return (
     <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`,
-                   borderRadius: 4, padding: '2px 9px', fontSize: '0.72rem', fontWeight: 700 }}>
-      {s.label}
+                   borderRadius: 4, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+      {status || '—'}
     </span>
   );
 }
 
 export default function SPATransactions({ onNavigate }) {
-  const [headers,   setHeaders]   = useState([]);
-  const [total,     setTotal]     = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
-  const [search,    setSearch]    = useState('');
-  const [statusTab, setStatusTab] = useState('all');
-  const [selected,  setSelected]  = useState(null);
+  const [rows,        setRows]        = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [search,      setSearch]      = useState('');
+  const [statusFilter,setStatusFilter]= useState('all');
   const debounceRef = useRef(null);
 
   const load = useCallback(async (q = '') => {
     setLoading(true); setError(null);
     try {
-      const res = await getSalesOrders({ filter: q });
-      setHeaders(res.value ?? []);
-      setTotal(res.top ?? null);
+      const res = await getSPATransactions({ filter: q });
+      setRows(res.value ?? []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -51,10 +46,15 @@ export default function SPATransactions({ onNavigate }) {
     debounceRef.current = setTimeout(() => load(q), 400);
   }
 
-  if (selected) return <SalesOrderDetail header={selected} onBack={() => setSelected(null)} />;
+  const filtered = statusFilter !== 'all'
+    ? rows.filter(r => r.status === statusFilter)
+    : rows;
 
-  const uniqueStatuses = ['all', ...new Set(headers.map(h => h.status).filter(Boolean))];
-  const filtered = statusTab !== 'all' ? headers.filter(h => h.status === statusTab) : headers;
+  // Generate display transaction ID (TXN-001 format) from index or use raw transId
+  function txnLabel(row, idx) {
+    if (row.transId && row.transId.trim()) return row.transId;
+    return `TXN-${String(idx + 1).padStart(3, '0')}`;
+  }
 
   return (
     <>
@@ -65,7 +65,8 @@ export default function SPATransactions({ onNavigate }) {
         </div>
         <button className="btn-outline" onClick={() => load(search)}>
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><line x1="12" y1="15" x2="12" y2="3"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <path d="M7 10l5 5 5-5"/><line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
           Export
         </button>
@@ -73,19 +74,19 @@ export default function SPATransactions({ onNavigate }) {
 
       {/* Toolbar */}
       <div className="txn-toolbar">
-        <div className="txn-search-wrap">
-          <svg style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#9ca3af' }}
+        <div className="txn-search-wrap" style={{ flex: 1 }}>
+          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}
                viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input className="txn-search-input" value={search} onChange={handleSearch} placeholder="Search transactions…" />
+          <input className="txn-search-input" style={{ width: '100%' }}
+                 value={search} onChange={handleSearch} placeholder="Search transactions…" />
         </div>
-        <select className="txn-status-select" value={statusTab} onChange={e => setStatusTab(e.target.value)}>
-          {uniqueStatuses.map(s => (
-            <option key={s} value={s}>
-              {s === 'all' ? 'All Statuses' : (STATUS_STYLE[s]?.label ?? s)}
-            </option>
-          ))}
+        <select className="txn-status-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <option value="all">All Statuses</option>
+          <option value="Linked">Linked</option>
+          <option value="Invoiced">Invoiced</option>
+          <option value="Failed">Failed</option>
         </select>
       </div>
 
@@ -107,28 +108,51 @@ export default function SPATransactions({ onNavigate }) {
           <table className="data-table txn-table">
             <thead>
               <tr>
-                <th>Sales Order</th>
+                <th>Transaction ID</th>
+                <th>SPA ID</th>
+                <th>Sales Order ID</th>
+                <th>Item</th>
                 <th>Customer</th>
-                <th>Company</th>
-                <th>Order Date</th>
+                <th>Vendor</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={5} style={{ textAlign:'center', color:'#9ca3af', padding:'40px 0' }}>No transactions found.</td></tr>
-              ) : filtered.map(h => (
-                <tr key={h.soId} className="so-hdr-row" onClick={() => setSelected(h)}>
-                  <td><span style={{ color:'#1d4ed8', fontWeight:500, cursor:'pointer' }}>{h.soId}</span></td>
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0' }}>
+                    No transactions found.
+                    {rows.length === 0 && !search && (
+                      <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#d1d5db' }}>
+                        Check that the SPA journal and transaction tables have records for company {import.meta.env.VITE_COMPANY_ID || 'USMF'}.
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ) : filtered.map((row, idx) => (
+                <tr key={row.transId || idx} className="so-hdr-row">
+                  <td style={{ fontWeight: 500, color: '#111827', fontSize: '0.84rem' }}>
+                    {txnLabel(row, idx)}
+                  </td>
+                  <td style={{ color: '#6b7280', fontSize: '0.83rem' }}>
+                    {row.spaId || <span style={{ color: '#d1d5db' }}>—</span>}
+                  </td>
                   <td>
-                    <div style={{ fontSize:'0.85rem', fontWeight:500 }}>{h.customerName || h.customerAccount}</div>
-                    {h.customerName && <div style={{ fontSize:'0.72rem', color:'#9ca3af' }}>{h.customerAccount}</div>}
+                    {row.salesOrderId
+                      ? <span style={{ color: '#1d4ed8', fontWeight: 500, cursor: 'pointer' }}>{row.salesOrderId}</span>
+                      : <span style={{ color: '#d1d5db' }}>—</span>
+                    }
                   </td>
-                  <td style={{ fontSize:'0.82rem', color:'#6b7280' }}>{h.companyId || '—'}</td>
-                  <td style={{ fontSize:'0.82rem', color:'#6b7280' }}>
-                    {h.orderDate ? new Date(h.orderDate).toLocaleDateString() : '—'}
+                  <td style={{ fontSize: '0.83rem', color: '#374151' }}>
+                    {row.item || <span style={{ color: '#d1d5db' }}>—</span>}
                   </td>
-                  <td><StatusBadge status={h.status}/></td>
+                  <td style={{ fontSize: '0.83rem', color: '#374151' }}>
+                    {row.customer || <span style={{ color: '#d1d5db' }}>—</span>}
+                  </td>
+                  <td style={{ fontSize: '0.83rem', color: '#d97706' }}>
+                    {row.vendor || <span style={{ color: '#d1d5db' }}>—</span>}
+                  </td>
+                  <td><StatusBadge status={row.status}/></td>
                 </tr>
               ))}
             </tbody>
