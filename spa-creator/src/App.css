@@ -1185,3 +1185,16 @@ span.cp-null { color: #ef4444; font-style: italic; font-size: 0.72rem; }
   display:flex; justify-content:flex-end; gap:10px;
   padding:14px 20px; border-top:1px solid #f3f4f6;
 }
+
+/* ── Dashboard → SPA Import preset filter banner ── */
+.preset-banner {
+  display:flex; align-items:center; gap:8px; margin-bottom:10px; margin-top:10px;
+  background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;
+  padding:8px 14px; font-size:0.83rem; color:#1d4ed8;
+}
+.preset-clear {
+  margin-left:auto; border:none; background:none; cursor:pointer;
+  font-size:0.78rem; color:#1d4ed8; font-weight:600;
+}
+.preset-clear:hover { text-decoration:underline; }
+.db-kpi-card:hover { border-color:#3b82f6; box-shadow:0 2px 10px rgba(59,130,246,.12); }

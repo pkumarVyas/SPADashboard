@@ -26,8 +26,20 @@ const IC = {
 };
 
 export default function App() {
-  const [active, setActive] = useState('home');
+  const [active,    setActive]    = useState('home');
+  const [navProps,  setNavProps]  = useState({});
   const { Component } = NAV.find(n => n.id === active);
+
+  function handleNavigate(screen, props = {}) {
+    setActive(screen);
+    setNavProps(props);
+  }
+
+  // Clear navProps when the user switches screens via sidebar
+  function handleSidebarNav(id) {
+    setActive(id);
+    setNavProps({});
+  }
 
   return (
     <div className="app-shell">
@@ -49,7 +61,7 @@ export default function App() {
             <button
               key={item.id}
               className={`sidebar-item${active === item.id ? ' active' : ''}`}
-              onClick={() => setActive(item.id)}
+              onClick={() => handleSidebarNav(item.id)}
             >
               <span className="sidebar-item-icon">{IC[item.id]}</span>
               <span className="sidebar-item-label">{item.label}</span>
@@ -59,7 +71,7 @@ export default function App() {
         </nav>
       </aside>
       <main className="app-main">
-        <Component onNavigate={setActive} />
+        <Component onNavigate={handleNavigate} {...navProps} />
       </main>
     </div>
   );

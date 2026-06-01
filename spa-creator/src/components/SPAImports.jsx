@@ -134,7 +134,14 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function SPAImports({ onNavigate }) {
+const PRESET_LABELS = {
+  all:     null,
+  today:   'Imported Today',
+  success: 'Successfully Imported',
+  review:  'Needs Review',
+};
+
+export default function SPAImports({ onNavigate, preset = 'all' }) {
   const [items,          setItems]          = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
@@ -142,6 +149,10 @@ export default function SPAImports({ onNavigate }) {
   const [codeFilter,     setCodeFilter]     = useState('all');
   const [selected,       setSelected]       = useState(null);
   const [showImport,     setShowImport]     = useState(false);
+  const [activePreset,   setActivePreset]   = useState(preset);
+
+  // Sync when preset prop changes (e.g. navigating from Dashboard)
+  useEffect(() => { setActivePreset(preset); }, [preset]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -166,9 +177,19 @@ export default function SPAImports({ onNavigate }) {
     return <SPAImportDetail doc={selected} onBack={() => setSelected(null)} onUpdate={handleUpdate} />;
   }
 
+  const today = new Date().toDateString();
   const uniqueCodes = ['all', ...Array.from(new Set(items.map(i => i.spaCode).filter(Boolean))).sort()];
   const q = search.toLowerCase();
   const filtered = items
+    .filter(i => {
+      if (activePreset === 'today')   return i.createdOn && new Date(i.createdOn).toDateString() === today;
+      if (activePreset === 'success') return (i.creationStatus ?? '').toLowerCase().includes('submit');
+      if (activePreset === 'review') {
+        const s = (i.creationStatus ?? '').toLowerCase();
+        return !s || s.includes('pending') || s.includes('fail') || s.includes('review');
+      }
+      return true;
+    })
     .filter(i => codeFilter === 'all' || i.spaCode === codeFilter)
     .filter(i => !q ||
       i.spaId.toLowerCase().includes(q) ||
@@ -215,6 +236,17 @@ export default function SPAImports({ onNavigate }) {
           </select>
         </div>
       </div>
+
+      {/* Active preset filter banner */}
+      {activePreset !== 'all' && (
+        <div className="preset-banner">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filtered by: <strong>{PRESET_LABELS[activePreset]}</strong>
+          <button className="preset-clear" onClick={() => setActivePreset('all')}>✕ Clear filter</button>
+        </div>
+      )}
 
       {loading && <div className="spa-loading" style={{ marginTop:20 }}><div className="spa-spinner"/>Loading SPA records…</div>}
       {error   && <div className="result error" style={{ marginTop:16 }}>✗ {error}</div>}
