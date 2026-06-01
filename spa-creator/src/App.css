@@ -977,3 +977,211 @@ span.cp-null { color: #ef4444; font-style: italic; font-size: 0.72rem; }
 .cp-warn-banner  { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.8rem; color:#78350f; }
 .cp-warn-banner code { background:#fef3c7; padding:1px 5px; border-radius:3px; font-family:monospace; }
 .cp-raw-pre { background:#1e1b4b; color:#c7d2fe; border-radius:6px; padding:10px; font-size:0.68rem; max-height:220px; overflow:auto; margin-top:8px; white-space:pre-wrap; word-break:break-all; }
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW REDESIGN — sidebar layout + new component styles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── App shell ── */
+.app-shell { display:flex; min-height:100vh; background:#f8f9fb; }
+.app-main  { flex:1; padding:32px 36px; overflow-x:hidden; min-width:0; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width:210px; min-height:100vh; background:#fff;
+  border-right:1px solid #e5e7eb; display:flex; flex-direction:column;
+  flex-shrink:0; position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.sidebar-logo {
+  display:flex; align-items:center; gap:10px;
+  padding:18px 16px 14px; border-bottom:1px solid #f3f4f6; flex-shrink:0;
+}
+.sidebar-logo-icon {
+  width:36px; height:36px; background:#1d4ed8; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.sidebar-logo-title { font-size:0.875rem; font-weight:700; color:#111827; line-height:1.2; }
+.sidebar-logo-sub   { font-size:0.7rem;   color:#6b7280; }
+.sidebar-nav { padding:6px 0; flex:1; }
+.sidebar-item {
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:10px 16px; border:none; background:none; cursor:pointer;
+  font-size:0.85rem; color:#4b5563; text-align:left;
+  transition:background 0.12s; border-left:3px solid transparent;
+}
+.sidebar-item:hover { background:#f9fafb; color:#111827; }
+.sidebar-item.active { background:#eff6ff; color:#1d4ed8; font-weight:600; border-left-color:#1d4ed8; }
+.sidebar-item-icon { width:17px; height:17px; flex-shrink:0; opacity:0.65; display:flex; }
+.sidebar-item.active .sidebar-item-icon { opacity:1; }
+.sidebar-item-label { flex:1; }
+.sidebar-chevron { color:#1d4ed8; font-size:1.1rem; line-height:1; }
+
+/* ── Shared page header ── */
+.page-hd { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; }
+.page-hd-title { font-size:1.55rem; font-weight:700; color:#111827; margin-bottom:4px; }
+.page-hd-sub   { font-size:0.85rem; color:#6b7280; }
+
+/* ── Dashboard ── */
+.db-kpi-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;
+}
+@media(max-width:900px){ .db-kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+.db-kpi-card {
+  background:white; border:1px solid #e5e7eb; border-radius:12px; padding:20px 18px;
+}
+.db-kpi-inner { display:flex; justify-content:space-between; align-items:flex-start; }
+.db-kpi-label { font-size:0.78rem; color:#6b7280; margin-bottom:8px; }
+.db-kpi-value { font-size:1.9rem; font-weight:700; color:#111827; }
+.db-kpi-trend     { font-size:0.72rem; color:#16a34a; margin-top:5px; display:flex; align-items:center; gap:3px; }
+.db-kpi-trend.neg { color:#dc2626; }
+.db-kpi-icon {
+  width:44px; height:44px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.db-section-title { font-size:1rem; font-weight:600; color:#111827; margin-bottom:14px; }
+.db-actions-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:8px;
+}
+@media(max-width:700px){ .db-actions-grid{ grid-template-columns:1fr; } }
+.db-action-card {
+  background:white; border:1px solid #e5e7eb; border-radius:12px;
+  padding:24px 20px; cursor:pointer; transition:border-color 0.15s, box-shadow 0.15s;
+}
+.db-action-card:hover { border-color:#3b82f6; box-shadow:0 2px 12px rgba(59,130,246,.12); }
+.db-action-icon  { margin-bottom:14px; }
+.db-action-title { font-size:0.95rem; font-weight:600; color:#111827; margin-bottom:6px; }
+.db-action-desc  { font-size:0.82rem; color:#6b7280; margin-bottom:14px; }
+.db-action-link  { font-size:0.82rem; color:#2563eb; font-weight:500; }
+.db-activity-box {
+  background:white; border:1px solid #e5e7eb; border-radius:12px;
+  min-height:160px; display:flex; align-items:center; justify-content:center;
+}
+.db-activity-empty { font-size:0.85rem; color:#9ca3af; }
+
+/* ── Shared toolbar (SPA Transactions, SPA Import) ── */
+.txn-toolbar {
+  display:flex; align-items:center; gap:10px; margin-bottom:4px;
+  background:white; border:1px solid #e5e7eb; border-radius:10px;
+  padding:10px 14px;
+}
+.txn-search-wrap { position:relative; flex:1 1 auto; min-width:160px; }
+.txn-search-input {
+  width:100%; padding:7px 10px 7px 32px;
+  border:1px solid #e5e7eb; border-radius:7px;
+  font-size:0.85rem; outline:none; background:#f9fafb; color:#111;
+}
+.txn-search-input:focus { border-color:#3b82f6; background:white; }
+.txn-status-select {
+  padding:7px 10px; border:1px solid #e5e7eb; border-radius:7px;
+  font-size:0.85rem; background:#f9fafb; color:#374151; cursor:pointer; outline:none;
+}
+.txn-table-head {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 20px; border-bottom:1px solid #f3f4f6;
+}
+.txn-table-icon { display:flex; align-items:center; color:#6b7280; }
+.txn-count-badge {
+  background:#f3f4f6; color:#6b7280; border-radius:4px;
+  padding:1px 8px; font-size:0.75rem; font-weight:600;
+}
+.txn-table { font-size:0.84rem; }
+
+/* ── Claims & Payments redesign (cp2-*) ── */
+.cp2-kpi-row {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px;
+}
+@media(max-width:1000px){ .cp2-kpi-row{ grid-template-columns:repeat(3,1fr); } }
+.cp2-kpi-card {
+  background:white; border:1px solid #e5e7eb; border-radius:12px;
+  padding:16px 18px; display:flex; align-items:center; gap:14px;
+}
+.cp2-kpi-icon {
+  width:44px; height:44px; border-radius:10px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.cp2-kpi-label { font-size:0.72rem; color:#6b7280; margin-bottom:4px; }
+.cp2-kpi-value { font-size:1.45rem; font-weight:700; color:#111827; }
+.cp2-main-row  { display:flex; gap:16px; align-items:flex-start; }
+@media(max-width:900px){ .cp2-main-row{ flex-direction:column; } }
+
+/* ── SPA Renewal — Renew button ── */
+.renew-btn {
+  display:inline-flex; align-items:center; gap:5px;
+  background:#1d4ed8; color:white; border:none; border-radius:6px;
+  padding:5px 12px; font-size:0.78rem; font-weight:600; cursor:pointer;
+}
+.renew-btn:hover { background:#1e40af; }
+
+/* ── Retroactive SPA Link ── */
+.retro-kpi-card {
+  background:white; border:1px solid #e5e7eb; border-radius:12px;
+  padding:18px 20px; border-top:3px solid transparent;
+}
+.retro-empty {
+  background:white; border:1px solid #e5e7eb; border-radius:12px;
+  padding:60px 24px; text-align:center; color:#6b7280; font-size:0.9rem;
+  display:flex; flex-direction:column; align-items:center; gap:16px;
+}
+.retro-empty p { max-width:380px; line-height:1.6; }
+
+/* ── Import modal ── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.45);
+  display:flex; align-items:center; justify-content:center; z-index:200;
+}
+.import-modal {
+  background:white; border-radius:14px; width:460px; max-width:95vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden;
+}
+.import-modal-hd {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid #f3f4f6;
+  font-size:0.95rem; font-weight:600; color:#111827;
+}
+.import-modal-close {
+  border:none; background:none; cursor:pointer; font-size:1rem;
+  color:#9ca3af; width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+  border-radius:6px;
+}
+.import-modal-close:hover { background:#f3f4f6; color:#374151; }
+.import-tabs { display:flex; gap:0; border-bottom:1px solid #f3f4f6; padding:0 20px; }
+.import-tab {
+  display:flex; align-items:center; gap:5px; padding:10px 14px;
+  border:none; background:none; cursor:pointer; font-size:0.82rem; color:#6b7280;
+  border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s;
+}
+.import-tab:hover { color:#111827; }
+.import-tab.active { color:#1d4ed8; border-bottom-color:#1d4ed8; font-weight:600; }
+.import-dropzone {
+  margin:20px; border:2px dashed #d1d5db; border-radius:12px;
+  padding:36px 20px; display:flex; flex-direction:column; align-items:center;
+  gap:10px; cursor:pointer; transition:border-color .15s, background .15s; text-align:center;
+}
+.import-dropzone:hover, .import-dropzone.drag-active {
+  border-color:#3b82f6; background:#f0f7ff;
+}
+.import-drop-icon {
+  width:52px; height:52px; background:#eff6ff; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+}
+.import-drop-title { font-size:0.9rem; font-weight:500; color:#111827; }
+.import-drop-sub   { font-size:0.8rem; color:#9ca3af; }
+.import-browse-btn {
+  display:flex; align-items:center; gap:6px;
+  border:1px solid #d1d5db; border-radius:7px; background:white;
+  padding:7px 14px; font-size:0.82rem; cursor:pointer; color:#374151;
+  margin-top:6px;
+}
+.import-browse-btn:hover { border-color:#3b82f6; color:#1d4ed8; }
+.import-success {
+  margin:20px; padding:30px; background:#f0fdf4; border:1px solid #bbf7d0;
+  border-radius:12px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
+}
+.import-success-icon {
+  width:44px; height:44px; background:#22c55e; border-radius:50%;
+  color:white; font-size:1.3rem; display:flex; align-items:center; justify-content:center;
+}
+.import-modal-ft {
+  display:flex; justify-content:flex-end; gap:10px;
+  padding:14px 20px; border-top:1px solid #f3f4f6;
+}

@@ -2,115 +2,72 @@ import { useState, useEffect, useCallback } from 'react';
 import { getClaimsData } from '../api/claimsApi';
 import ClaimsChart from './ClaimsChart';
 
-// ── Horizontal vendor bar chart (SVG) ─────────────────────────────────────────
-function VendorChart({ vendors }) {
-  if (!vendors?.length) return <div className="cp-empty">No vendor data</div>;
-  const max = Math.max(...vendors.map(v => v.claimed), 1);
-  const ROW = 36, PAD_L = 90, PAD_R = 80, W = 480, BAR_H = 10, GAP = 4;
-  const H = vendors.length * ROW + 10;
+function KpiCard({ label, value, loading, iconBg, iconColor, icon }) {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', display:'block' }} aria-label="Top vendors chart">
-      {vendors.map((v, i) => {
-        const y      = i * ROW + 8;
-        const cWidth = W - PAD_L - PAD_R;
-        const clW    = Math.max(2, (v.claimed / max) * cWidth);
-        const pdW    = Math.max(v.paid > 0 ? 2 : 0, (v.paid / max) * cWidth);
-        const label  = v.vendor.length > 12 ? v.vendor.slice(0,11)+'…' : v.vendor;
-        return (
-          <g key={v.vendor}>
-            <text x={PAD_L - 6} y={y + BAR_H} textAnchor="end" fontSize="10" fill="#374151">{label}</text>
-            {/* Claimed bar */}
-            <rect x={PAD_L} y={y} width={clW} height={BAR_H} fill="#6366f1" rx="2" opacity="0.85">
-              <title>Claimed: {v.claimedFmt}</title>
-            </rect>
-            {/* Paid bar */}
-            <rect x={PAD_L} y={y + BAR_H + GAP} width={pdW} height={BAR_H} fill="#22c55e" rx="2" opacity="0.85">
-              <title>Paid: {v.paidFmt}</title>
-            </rect>
-            <text x={PAD_L + clW + 4} y={y + BAR_H} fontSize="9" fill="#6b7280">{v.claimedFmt}</text>
-            <text x={PAD_L + pdW + 4} y={y + BAR_H + GAP + BAR_H} fontSize="9" fill="#6b7280">{v.paidFmt}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-// ── Status breakdown bars ─────────────────────────────────────────────────────
-const STATUS_COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316'];
-
-function StatusBreakdown({ statuses }) {
-  if (!statuses?.length) return <div className="cp-empty">No status data</div>;
-  const maxAmt = Math.max(...statuses.map(s => s.amount), 1);
-  return (
-    <div className="cp-status-list">
-      {statuses.map((s, i) => (
-        <div key={s.status} className="cp-status-row">
-          <div className="cp-status-label">
-            <span className="cp-status-dot" style={{ background: STATUS_COLORS[i % STATUS_COLORS.length] }} />
-            <span className="cp-status-name">{s.status || 'Unknown'}</span>
-            <span className="cp-status-count">{s.count} claims</span>
-          </div>
-          <div className="cp-status-bar-wrap">
-            <div className="cp-status-bar-track">
-              <div
-                className="cp-status-bar-fill"
-                style={{ width:`${s.pct}%`, background: STATUS_COLORS[i % STATUS_COLORS.length] }}
-              />
-            </div>
-            <span className="cp-status-amt">{s.amountFmt}</span>
-            <span className="cp-status-pct">{s.pct}%</span>
-          </div>
-        </div>
-      ))}
+    <div className="cp2-kpi-card">
+      <div className="cp2-kpi-icon" style={{ background: iconBg, color: iconColor }}>{icon}</div>
+      <div>
+        <div className="cp2-kpi-label">{label}</div>
+        {loading
+          ? <div className="cp-kpi-skel-val" style={{ marginTop: 6 }} />
+          : <div className="cp2-kpi-value">{value ?? '—'}</div>
+        }
+      </div>
     </div>
   );
 }
 
-// ── Spinner ───────────────────────────────────────────────────────────────────
-function Spinner({ small }) {
-  return <div className={small ? 'cp-spinner-ring-sm' : 'cp-spinner-ring'} />;
-}
-
-function ChartLoader({ height = 160 }) {
+function PayRateBadge({ rate }) {
+  const n = parseFloat(rate);
+  const bg    = n >= 90 ? '#f0fdf4' : n >= 85 ? '#eff6ff' : n >= 80 ? '#fffbeb' : '#fef2f2';
+  const color = n >= 90 ? '#15803d' : n >= 85 ? '#1d4ed8' : n >= 80 ? '#d97706' : '#dc2626';
+  const border= n >= 90 ? '#bbf7d0' : n >= 85 ? '#bfdbfe' : n >= 80 ? '#fde68a' : '#fecaca';
   return (
-    <div className="cp-chart-placeholder" style={{ height }}>
-      <Spinner />
-      <span>Loading…</span>
-    </div>
+    <span style={{ background:bg, color, border:`1px solid ${border}`, borderRadius:4,
+                   padding:'2px 8px', fontSize:'0.72rem', fontWeight:700 }}>
+      {isNaN(n) ? '—' : `${n.toFixed(1)}%`}
+    </span>
   );
 }
 
-// ── KPI card ──────────────────────────────────────────────────────────────────
-function KpiCard({ title, value, sub, accent, progress, loading }) {
+function VendorTable({ vendors, loading }) {
+  if (loading) return (
+    <div className="cp-aging-loading"><div className="cp-spinner-ring-sm"/><span>Loading…</span></div>
+  );
+  if (!vendors?.length) return <div className="cp-empty" style={{ padding:'24px 0', textAlign:'center', color:'#9ca3af' }}>No vendor data</div>;
+
   return (
-    <div className={`cp-kpi-card cp-kpi-${accent}`}>
-      <div className="cp-kpi-title">{title}</div>
-      {loading ? (
-        <>
-          <div className="cp-kpi-skel-val" />
-          <div className="cp-kpi-skel-sub" />
-        </>
-      ) : (
-        <>
-          <div className="cp-kpi-value">{value ?? '—'}</div>
-          {sub && <div className="cp-kpi-sub">{sub}</div>}
-          {progress != null && (
-            <div className="cp-kpi-progress-track">
-              <div className="cp-kpi-progress-fill" style={{ width:`${Math.min(100, progress)}%` }} />
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.83rem' }}>
+      <thead>
+        <tr style={{ borderBottom:'1px solid #f3f4f6' }}>
+          <th style={{ textAlign:'left', padding:'8px 0', color:'#6b7280', fontWeight:600 }}>Vendor</th>
+          <th style={{ textAlign:'right', padding:'8px 8px', color:'#6b7280', fontWeight:600 }}>Amount Paid</th>
+          <th style={{ textAlign:'right', padding:'8px 8px', color:'#6b7280', fontWeight:600 }}>Claims</th>
+          <th style={{ textAlign:'right', padding:'8px 0', color:'#6b7280', fontWeight:600 }}>Pay Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {vendors.map(v => {
+          const rate = v.claimed > 0 ? (v.paid / v.claimed * 100) : 0;
+          return (
+            <tr key={v.vendor} style={{ borderBottom:'1px solid #f9fafb' }}>
+              <td style={{ padding:'10px 0', color:'#111827', fontWeight:500 }}>{v.vendor}</td>
+              <td style={{ textAlign:'right', padding:'10px 8px', color:'#374151' }}>{v.paidFmt}</td>
+              <td style={{ textAlign:'right', padding:'10px 8px', color:'#6b7280' }}>{v.count ?? '—'}</td>
+              <td style={{ textAlign:'right', padding:'10px 0' }}><PayRateBadge rate={rate}/></td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-export default function ClaimsPayments() {
+export default function ClaimsPayments({ onNavigate }) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
+  const [year,    setYear]    = useState(new Date().getFullYear());
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -121,28 +78,31 @@ export default function ClaimsPayments() {
 
   useEffect(() => { load(); }, [load]);
 
-  const kpis            = data?.kpis           ?? {};
-  const chartData       = data?.chartData      ?? [];
-  const vendors         = data?.vendors        ?? [];
-  const statusBreakdown = data?.statusBreakdown ?? [];
-  const agingBuckets    = data?.agingBuckets   ?? [];
-  const counts          = data?.counts         ?? {};
+  const kpis      = data?.kpis      ?? {};
+  const chartData = data?.chartData ?? [];
+  const vendors   = data?.vendors   ?? [];
+  const counts    = data?.counts    ?? {};
 
-  const noData = !loading && !error && data?.kpis?.totalClaimed?.raw === 0;
+  const yearOptions = [year - 1, year, year + 1];
 
   return (
     <>
-      {/* ── Header ── */}
-      <div className="cp-page-header">
+      <div className="page-hd">
         <div>
-          <h2>Claims &amp; Payments</h2>
-          <p className="cp-page-sub">
-            SPA claims analytics · {counts.journal ?? 0} claims · {counts.payments ?? 0} payments
-          </p>
+          <div className="page-hd-title">Claims &amp; Payments</div>
+          <div className="page-hd-sub">Track claims, payments, and financial performance</div>
         </div>
-        <button className="btn-outline" onClick={load} disabled={loading}>
-          {loading ? <span className="btn-spinner" /> : '↺'} Refresh
-        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <select
+            style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'6px 10px', fontSize:'0.85rem', color:'#374151' }}
+            value={year} onChange={e => setYear(+e.target.value)}
+          >
+            {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <button className="btn-outline" onClick={load} disabled={loading}>
+            {loading ? <div className="cp-spinner-ring-sm"/> : '↺'} Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -152,83 +112,60 @@ export default function ClaimsPayments() {
         </div>
       )}
 
-      {noData && !error && (
-        <div className="cp-warn-banner">
-          <strong>Amounts are $0.</strong> The journal entity may have returned no records, or the amount field mapping may need refreshing.
-          {counts.journal === 0 && <span> Journal returned <strong>0 records</strong> — check the table name or company filter.</span>}
-        </div>
-      )}
-
-      {/* ── KPI cards ── */}
-      <div className="cp-kpi-row">
-        <KpiCard loading={loading} title="Total Claimed"    value={kpis.totalClaimed?.label}  sub="All-time claim value"        accent="indigo" />
-        <KpiCard loading={loading} title="Total Paid"       value={kpis.totalPaid?.label}      sub="Vendor payments received"    accent="green" />
-        <KpiCard loading={loading} title="Outstanding"      value={kpis.outstanding?.label}    sub="Unpaid claim balance"        accent="amber" />
-        <KpiCard loading={loading} title="Pay Rate"         value={kpis.payRate?.label}        sub="Paid ÷ Claimed"             accent="blue"   progress={kpis.payRate?.raw} />
-        <KpiCard loading={loading} title="Avg Days to Pay"  value={kpis.avgDaysToPay?.label}   sub="Claim date → payment date"  accent="purple" />
+      {/* KPI row */}
+      <div className="cp2-kpi-row">
+        <KpiCard loading={loading} label="Amount Claimed" value={kpis.totalClaimed?.label}
+          iconBg="#dbeafe" iconColor="#1d4ed8"
+          icon={<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+        />
+        <KpiCard loading={loading} label="Amount Paid" value={kpis.totalPaid?.label}
+          iconBg="#d1fae5" iconColor="#059669"
+          icon={<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
+        />
+        <KpiCard loading={loading} label="Pending" value={kpis.outstanding?.label}
+          iconBg="#fef3c7" iconColor="#d97706"
+          icon={<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+        />
+        <KpiCard loading={loading} label="Written Off" value="—"
+          iconBg="#fee2e2" iconColor="#dc2626"
+          icon={<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>}
+        />
+        <KpiCard loading={loading} label="Pay Rate" value={kpis.payRate?.label}
+          iconBg="#f3e8ff" iconColor="#7c3aed"
+          icon={<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>}
+        />
       </div>
 
-      {/* ── Trend chart ── */}
-      <div className="chart-card">
-        <div className="cp-card-header">
-          <div>
-            <div className="chart-title">Monthly Claims vs Payments</div>
-            <div className="chart-sub">Last 12 months — $ thousands</div>
+      {/* Two-column: chart + vendor table */}
+      <div className="cp2-main-row">
+        {/* Monthly chart */}
+        <div className="chart-card" style={{ flex:'1 1 58%' }}>
+          <div className="cp-card-header" style={{ marginBottom:12 }}>
+            <div>
+              <div className="chart-title">Monthly Claims vs Payments</div>
+            </div>
+            <div className="legend">
+              <span className="legend-item"><span className="legend-dot" style={{ background:'#f97316' }}/>Amount Claimed</span>
+              <span className="legend-item"><span className="legend-dot" style={{ background:'#0d9488' }}/>Amount Paid</span>
+            </div>
           </div>
-          <div className="legend">
-            <span className="legend-item"><span className="legend-dot" style={{ background:'#6366f1' }} />Claimed</span>
-            <span className="legend-item"><span className="legend-dot" style={{ background:'#22c55e' }} />Paid</span>
+          {loading && !chartData.length
+            ? <div className="cp-chart-placeholder" style={{ height:220 }}><div className="cp-spinner-ring"/><span>Loading…</span></div>
+            : <ClaimsChart data={chartData}/>
+          }
+        </div>
+
+        {/* Vendor table */}
+        <div className="chart-card" style={{ flex:'1 1 38%' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#374151" strokeWidth="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span className="chart-title" style={{ marginBottom:0 }}>Vendor Payment Details</span>
           </div>
-        </div>
-        {loading && !chartData.length
-          ? <ChartLoader height={200} />
-          : <ClaimsChart data={chartData} />
-        }
-      </div>
-
-      {/* ── Vendor + Status side-by-side ── */}
-      <div className="cp-two-col">
-        <div className="chart-card">
-          <div className="chart-title">Top Vendors by Claim Amount</div>
-          <div className="chart-sub">Claimed (indigo) vs Paid (green)</div>
-          {loading ? <ChartLoader /> : <VendorChart vendors={vendors} />}
-        </div>
-        <div className="chart-card">
-          <div className="chart-title">Claims by Status</div>
-          <div className="chart-sub">Count and value per status</div>
-          {loading ? <ChartLoader /> : <StatusBreakdown statuses={statusBreakdown} />}
+          <VendorTable vendors={vendors} loading={loading}/>
         </div>
       </div>
-
-      {/* ── Aging analysis ── */}
-      <div className="chart-card">
-        <div className="chart-title">Aging Analysis</div>
-        <div className="chart-sub">Outstanding unpaid claims by age since claim date</div>
-        {loading ? (
-          <div className="cp-aging-loading">
-            <Spinner small />
-            <span>Loading aging data…</span>
-          </div>
-        ) : (
-          <table className="aging-table">
-            <tbody>
-              {(agingBuckets.length ? agingBuckets : [{label:'No data',claims:0,amountFmt:'—',pct:0,tier:'low',danger:false}]).map(b => (
-                <tr key={b.label}>
-                  <td className={`aging-label${b.danger?' danger':''}`}>{b.label}</td>
-                  <td className="aging-bar-cell">
-                    <div className="aging-track">
-                      <div className={`aging-fill ${b.tier}`} style={{ width:`${b.pct}%` }} />
-                    </div>
-                  </td>
-                  <td className="aging-count">{b.c ?? b.claims} claims</td>
-                  <td className={`aging-amount${b.danger?' danger':''}`}>{b.amountFmt ?? b.amount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
     </>
   );
 }

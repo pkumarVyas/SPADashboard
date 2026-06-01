@@ -199,7 +199,8 @@ module.exports = async function (context, req) {
     const vmap = {};
     journal.forEach(j => {
       if (!j.vendor) return;
-      (vmap[j.vendor] = vmap[j.vendor] ?? { vendor:j.vendor, claimed:0, paid:0 }).claimed += j.amount;
+      const v = vmap[j.vendor] = vmap[j.vendor] ?? { vendor:j.vendor, claimed:0, paid:0, count:0 };
+      v.claimed += j.amount; v.count++;
     });
     enriched.forEach(j => {
       if (j.vendor && j.payment && vmap[j.vendor]) vmap[j.vendor].paid += j.payment.amount;
@@ -207,7 +208,7 @@ module.exports = async function (context, req) {
     const vendors = Object.values(vmap)
       .sort((a,b) => b.claimed - a.claimed)
       .slice(0, 10)
-      .map(v => ({ vendor:v.vendor, claimed:Math.round(v.claimed), paid:Math.round(v.paid), claimedFmt:fmt(v.claimed), paidFmt:fmt(v.paid) }));
+      .map(v => ({ vendor:v.vendor, claimed:Math.round(v.claimed), paid:Math.round(v.paid), count:v.count, claimedFmt:fmt(v.claimed), paidFmt:fmt(v.paid) }));
 
     // ── Claims by status ──────────────────────────────────────────────────────
     const smap = {};

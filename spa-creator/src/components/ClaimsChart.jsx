@@ -1,6 +1,6 @@
 const W = 720, H = 200;
 const PAD = { top: 10, right: 12, bottom: 28, left: 48 };
-const COLORS = { claimed: '#6366f1', paid: '#22c55e' };
+const COLORS = { claimed: '#f97316', paid: '#0d9488' };
 const KEYS   = ['claimed', 'paid'];
 const BAR_W  = 14;
 const OFFSETS = [-(BAR_W / 2 + 2), BAR_W / 2 + 2];
