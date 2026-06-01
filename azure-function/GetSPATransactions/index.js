@@ -127,10 +127,10 @@ module.exports = async function (context, req) {
       'mserp_spajournalid',        // link to journal
     ].join(',');
 
-    // Journal: only transId + vendor
+    // Journal: transId + vendor + customer
     const journalVendorSel = JF.vendor
-      ? `mserp_spatransid,mserp_spaid,${JF.vendor}`
-      : 'mserp_spatransid,mserp_spaid';
+      ? `mserp_spatransid,mserp_spaid,${JF.vendor},mserp_customer`
+      : 'mserp_spatransid,mserp_spaid,mserp_customer';
 
     const [tRes, jRes, pRes] = await Promise.all([
       fetch(`${DATAVERSE_API_URL}/${TRANS_TABLE}?$select=${TRANS_SEL}&$filter=${coF}&$top=${top}&$orderby=mserp_spatransdate desc`, { headers: dvH }),
@@ -157,11 +157,14 @@ module.exports = async function (context, req) {
                 ?? '',
     }));
 
-    // Vendor lookup by transId from journal
-    const vendorMap = new Map(
+    // Vendor + customer lookup by transId from journal
+    const journalMap = new Map(
       (jJson.value ?? [])
         .filter(r => r.mserp_spatransid)
-        .map(r => [r.mserp_spatransid, JF.vendor ? (r[JF.vendor] ?? '') : ''])
+        .map(r => [r.mserp_spatransid, {
+          vendor:   JF.vendor ? (r[JF.vendor] ?? '') : '',
+          customer: r.mserp_customer ?? '',
+        }])
     );
 
     // transIds that have at least one payment (→ "Linked")
@@ -170,17 +173,20 @@ module.exports = async function (context, req) {
     );
 
     // Build result rows
-    let rows = trans.map(t => ({
-      transId:     t.transId,
-      spaId:       t.spaId,
-      salesOrderId:t.salesOrderId,
-      item:        t.item,
-      customer:    '',                               // not in trans entity
-      vendor:      vendorMap.get(t.transId) ?? '',
-      date:        t.date,
-      statusName:  t.statusName,
-      status:      deriveStatus(t.statusName, paidTransIds.has(t.transId)),
-    }));
+    let rows = trans.map(t => {
+      const jData = journalMap.get(t.transId) ?? {};
+      return {
+        transId:     t.transId,
+        spaId:       t.spaId,
+        salesOrderId:t.salesOrderId,
+        item:        t.item,
+        customer:    jData.customer ?? '',
+        vendor:      jData.vendor   ?? '',
+        date:        t.date,
+        statusName:  t.statusName,
+        status:      deriveStatus(t.statusName, paidTransIds.has(t.transId)),
+      };
+    });
 
     // Server-side search
     if (search) {
@@ -189,6 +195,7 @@ module.exports = async function (context, req) {
         r.spaId.toLowerCase().includes(search)        ||
         r.salesOrderId.toLowerCase().includes(search) ||
         r.item.toLowerCase().includes(search)         ||
+        r.customer.toLowerCase().includes(search)     ||
         r.vendor.toLowerCase().includes(search)
       );
     }
