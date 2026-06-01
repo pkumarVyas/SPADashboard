@@ -43,8 +43,9 @@ function pickField(attrs, type, ...pats) {
 
 async function safeJson(res, tag, ctx) {
   if (!res.ok) {
-    ctx.log.warn(`${tag} ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`);
-    return { value: [] };
+    const body = await res.text().catch(() => '');
+    ctx.log.error(`${tag} FAILED ${res.status}: ${body.slice(0, 500)}`);
+    return { value: [], _error: `${res.status}: ${body.slice(0, 200)}` };
   }
   return res.json();
 }
@@ -115,16 +116,16 @@ module.exports = async function (context, req) {
     }
     const JF = CACHED_JF;
 
-    // Trans: only select the known fields
+    // Trans: select only non-virtual fields (virtual fields like spatransstatusname
+    // cannot be in $select — they come through via the annotation header automatically)
     const TRANS_SEL = [
       'mserp_spatransid',
       'mserp_spaid',
-      'mserp_transrefid',          // "Number" — sales order / SO reference
-      'mserp_itemid',              // "Item number"
-      'mserp_spatransdate',        // "SPA transaction date"
-      'mserp_spatransstatus',      // status code (Picklist)
-      'mserp_spatransstatusname',  // status label (Virtual, needs annotation header)
-      'mserp_spajournalid',        // link to journal
+      'mserp_transrefid',      // "Number" — sales order / SO reference
+      'mserp_itemid',          // "Item number"
+      'mserp_spatransdate',    // "SPA transaction date"
+      'mserp_spatransstatus',  // status code (Picklist)
+      'mserp_spajournalid',    // link to journal
     ].join(',');
 
     // Journal: transId + vendor + customer
@@ -204,7 +205,18 @@ module.exports = async function (context, req) {
 
     context.res = {
       status: 200, headers: cors,
-      body: { success: true, count: rows.length, value: rows },
+      body: {
+        success: true,
+        count:   rows.length,
+        value:   rows,
+        _debug: {
+          transFetched:    trans.length,
+          journalFetched:  jJson.value?.length ?? 0,
+          paymentsFetched: pJson.value?.length ?? 0,
+          transError:      tJson._error ?? null,
+          journalError:    jJson._error ?? null,
+        },
+      },
     };
   } catch (err) {
     context.log.error('GetSPATransactions error:', err.message);
