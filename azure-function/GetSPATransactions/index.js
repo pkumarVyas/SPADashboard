@@ -128,10 +128,11 @@ module.exports = async function (context, req) {
       'mserp_spajournalid',    // link to journal
     ].join(',');
 
-    // Journal: transId + vendor + customer
+    // Journal: fetch without explicit $select to avoid virtual-field issues
+    // and so we can inspect the raw record in debug to find the right join key
     const journalVendorSel = JF.vendor
-      ? `mserp_spatransid,mserp_spaid,${JF.vendor},mserp_customer`
-      : 'mserp_spatransid,mserp_spaid,mserp_customer';
+      ? `mserp_spatransid,mserp_spaid,mserp_spajournalid,${JF.vendor},mserp_customer`
+      : 'mserp_spatransid,mserp_spaid,mserp_spajournalid,mserp_customer';
 
     const [tRes, jRes, pRes] = await Promise.all([
       fetch(`${DATAVERSE_API_URL}/${TRANS_TABLE}?$select=${TRANS_SEL}&$filter=${coF}&$top=${top}&$orderby=mserp_spatransdate desc`, { headers: dvH }),
@@ -146,36 +147,43 @@ module.exports = async function (context, req) {
     ]);
 
     // Map trans records (primary — each row = one SPA transaction)
-    const trans = (tJson.value ?? []).map(r => ({
-      transId:     r.mserp_spatransid ?? '',
-      spaId:       r.mserp_spaid      ?? '',
-      salesOrderId:r.mserp_transrefid ?? '',   // "Number" field
-      item:        r.mserp_itemid     ?? '',
+    const trans = transRaw.map(r => ({
+      transId:     r.mserp_spatransid  ?? '',
+      spaId:       r.mserp_spaid       ?? '',
+      salesOrderId:r.mserp_transrefid  ?? '',
+      item:        r.mserp_itemid      ?? '',
+      journalId:   r.mserp_spajournalid ?? '',
       date:        r.mserp_spatransdate ?? null,
-      // Virtual field may come as formatted value annotation or direct property
       statusName:  r['mserp_spatransstatusname@OData.Community.Display.V1.FormattedValue']
-                ?? r.mserp_spatransstatusname
-                ?? '',
+                ?? r.mserp_spatransstatusname ?? '',
     }));
 
-    // Vendor + customer lookup by transId from journal
-    const journalMap = new Map(
-      (jJson.value ?? [])
-        .filter(r => r.mserp_spatransid)
-        .map(r => [r.mserp_spatransid, {
-          vendor:   JF.vendor ? (r[JF.vendor] ?? '') : '',
-          customer: r.mserp_customer ?? '',
-        }])
-    );
+    // Build two journal maps — try both transId AND journalId as join keys
+    // because it's unclear which one matches the trans table's mserp_spatransid
+    const journalByTransId   = new Map();
+    const journalByJournalId = new Map();
+    for (const r of (jJson.value ?? [])) {
+      const payload = {
+        vendor:   JF.vendor ? (r[JF.vendor] ?? '') : '',
+        customer: r.mserp_customer ?? '',
+      };
+      if (r.mserp_spatransid)  journalByTransId.set(r.mserp_spatransid,  payload);
+      if (r.mserp_spajournalid) journalByJournalId.set(r.mserp_spajournalid, payload);
+    }
+
+    // Also read spajournalid from trans records (already selected in TRANS_SEL)
+    const transRaw = tJson.value ?? [];
 
     // transIds that have at least one payment (→ "Linked")
     const paidTransIds = new Set(
       (pJson.value ?? []).map(r => r.mserp_spatransid).filter(Boolean)
     );
 
-    // Build result rows
+    // Build result rows — try transId join first, fall back to journalId join
     let rows = trans.map(t => {
-      const jData = journalMap.get(t.transId) ?? {};
+      const jData = journalByTransId.get(t.transId)
+                 ?? journalByJournalId.get(t.journalId)
+                 ?? {};
       return {
         transId:     t.transId,
         spaId:       t.spaId,
@@ -210,11 +218,19 @@ module.exports = async function (context, req) {
         count:   rows.length,
         value:   rows,
         _debug: {
-          transFetched:    trans.length,
-          journalFetched:  jJson.value?.length ?? 0,
-          paymentsFetched: pJson.value?.length ?? 0,
-          transError:      tJson._error ?? null,
-          journalError:    jJson._error ?? null,
+          transFetched:      trans.length,
+          journalFetched:    jJson.value?.length ?? 0,
+          paymentsFetched:   pJson.value?.length ?? 0,
+          transError:        tJson._error ?? null,
+          journalError:      jJson._error ?? null,
+          vendorField:       JF.vendor,
+          sampleTrans:       transRaw[0]
+            ? { transId: transRaw[0].mserp_spatransid, journalId: transRaw[0].mserp_spajournalid }
+            : null,
+          sampleJournal:     (jJson.value ?? [])[0]
+            ? { transId: (jJson.value)[0].mserp_spatransid, journalId: (jJson.value)[0].mserp_spajournalid, customer: (jJson.value)[0].mserp_customer, allKeys: Object.keys((jJson.value)[0]).slice(0, 20) }
+            : null,
+          joinHits: rows.filter(r => r.vendor || r.customer).length,
         },
       },
     };
