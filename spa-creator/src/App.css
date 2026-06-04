@@ -1185,6 +1185,9 @@ span.cp-null { color: #ef4444; font-style: italic; font-size: 0.72rem; }
   display:flex; justify-content:flex-end; gap:10px;
   padding:14px 20px; border-top:1px solid #f3f4f6;
 }
+.import-error {
+  background:#fef2f2; border-color:#fecaca;
+}
 
 /* ── Dashboard → SPA Import preset filter banner ── */
 .preset-banner {

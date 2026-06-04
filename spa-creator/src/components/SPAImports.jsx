@@ -5,26 +5,59 @@ import SPAImportDetail from './SPAImportDetail';
 const SPA_CODE_CLS = { PRPOC:'spa-code-prpoc', PRCLM:'spa-code-prclm', PPINF:'spa-code-ppinf', PEPOC:'spa-code-pepoc', PRINF:'spa-code-prinf' };
 
 const ACCEPT = { Excel:'.xlsx,.xls', CSV:'.csv', PDF:'.pdf', EDI:'.edi,.txt,.x12' };
+const UPLOAD_URL = import.meta.env.VITE_UPLOAD_SPA_DOC_URL || '/api/UploadSPADocument';
+
+function readAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]); // strip data:...;base64,
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 function ImportModal({ onClose }) {
   const [tab,          setTab]          = useState('Excel');
   const [dragOver,     setDragOver]     = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploaded,     setUploaded]     = useState(false);
+  const [uploading,    setUploading]    = useState(false);
+  const [result,       setResult]       = useState(null); // { success, message }
   const fileRef = useRef(null);
 
   function handleDrop(e) {
     e.preventDefault(); setDragOver(false);
     const f = e.dataTransfer.files[0];
-    if (f) setSelectedFile(f);
+    if (f) { setSelectedFile(f); setResult(null); }
   }
   function handleSelect(e) {
     const f = e.target.files[0];
-    if (f) setSelectedFile(f);
+    if (f) { setSelectedFile(f); setResult(null); }
   }
-  function handleUpload() {
-    if (!selectedFile) return;
-    setUploaded(true);
+
+  async function handleUpload() {
+    if (!selectedFile || uploading) return;
+    setUploading(true);
+    try {
+      const fileContent = await readAsBase64(selectedFile);
+      const res  = await fetch(UPLOAD_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName:    selectedFile.name,
+          fileType:    selectedFile.type,
+          fileContent,
+          fileFormat:  tab,
+          uploadedAt:  new Date().toISOString(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setResult({ success: true,  message: json.message });
+    } catch (e) {
+      setResult({ success: false, message: e.message });
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -54,8 +87,21 @@ function ImportModal({ onClose }) {
           ))}
         </div>
 
-        {/* Drop zone */}
-        {!uploaded ? (
+        {/* Drop zone or result */}
+        {result ? (
+          <div className={`import-success${result.success ? '' : ' import-error'}`}>
+            <div className="import-success-icon" style={{ background: result.success ? '#22c55e' : '#ef4444' }}>
+              {result.success ? '✓' : '✕'}
+            </div>
+            <div style={{ fontWeight:600 }}>{result.success ? 'Submitted to Power Automate' : 'Upload failed'}</div>
+            <div style={{ fontSize:'0.82rem', color:'#6b7280', marginTop:4, textAlign:'center', maxWidth:340 }}>{result.message}</div>
+            {!result.success && (
+              <button className="import-browse-btn" style={{ marginTop:12 }} onClick={() => setResult(null)}>
+                Try again
+              </button>
+            )}
+          </div>
+        ) : (
           <>
             <div
               className={`import-dropzone${dragOver ? ' drag-active' : ''}`}
@@ -88,29 +134,26 @@ function ImportModal({ onClose }) {
             </div>
             <input ref={fileRef} type="file" style={{ display:'none' }} accept={ACCEPT[tab]} onChange={handleSelect} />
           </>
-        ) : (
-          <div className="import-success">
-            <div className="import-success-icon">✓</div>
-            <div style={{ fontWeight:600 }}>File received</div>
-            <div style={{ fontSize:'0.82rem', color:'#6b7280', marginTop:4 }}>{selectedFile.name}</div>
-            <div style={{ fontSize:'0.78rem', color:'#9ca3af', marginTop:8 }}>Processing pipeline coming soon — file has been selected.</div>
-          </div>
         )}
 
         <div className="import-modal-ft">
-          <button className="btn-outline" onClick={onClose}>Cancel</button>
-          {!uploaded && (
+          <button className="btn-outline" onClick={onClose} disabled={uploading}>
+            {result?.success ? 'Close' : 'Cancel'}
+          </button>
+          {!result && (
             <button
               className="btn-primary"
-              style={{ background: selectedFile ? '#1d4ed8' : '#9ca3af', cursor: selectedFile ? 'pointer' : 'not-allowed' }}
-              disabled={!selectedFile}
+              style={{ background: (selectedFile && !uploading) ? '#1d4ed8' : '#9ca3af', cursor: (selectedFile && !uploading) ? 'pointer' : 'not-allowed', minWidth: 100 }}
+              disabled={!selectedFile || uploading}
               onClick={handleUpload}
             >
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              Upload
+              {uploading
+                ? <><div className="cp-spinner-ring-sm" style={{ borderTopColor:'white' }}/> Uploading…</>
+                : <><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg> Upload</>
+              }
             </button>
           )}
         </div>
