@@ -16,7 +16,7 @@ function readAsBase64(file) {
   });
 }
 
-function ImportModal({ onClose }) {
+function ImportModal({ onClose, onSuccess }) {
   const [tab,          setTab]          = useState('Excel');
   const [dragOver,     setDragOver]     = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -95,6 +95,11 @@ function ImportModal({ onClose }) {
             </div>
             <div style={{ fontWeight:600 }}>{result.success ? 'Submitted to Power Automate' : 'Upload failed'}</div>
             <div style={{ fontSize:'0.82rem', color:'#6b7280', marginTop:4, textAlign:'center', maxWidth:340 }}>{result.message}</div>
+            {result.success && (
+              <div style={{ fontSize:'0.76rem', color:'#9ca3af', marginTop:6, textAlign:'center' }}>
+                The list will refresh automatically — the record will appear once Power Automate finishes processing (usually within a few seconds).
+              </div>
+            )}
             {!result.success && (
               <button className="import-browse-btn" style={{ marginTop:12 }} onClick={() => setResult(null)}>
                 Try again
@@ -137,8 +142,10 @@ function ImportModal({ onClose }) {
         )}
 
         <div className="import-modal-ft">
-          <button className="btn-outline" onClick={onClose} disabled={uploading}>
-            {result?.success ? 'Close' : 'Cancel'}
+          <button className="btn-outline"
+            onClick={() => { if (result?.success) onSuccess?.(); onClose(); }}
+            disabled={uploading}>
+            {result?.success ? 'Close & Refresh' : 'Cancel'}
           </button>
           {!result && (
             <button
@@ -243,7 +250,7 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
 
   return (
     <>
-      {showImport && <ImportModal onClose={() => setShowImport(false)} />}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onSuccess={load} />}
 
       <div className="page-hd">
         <div>
