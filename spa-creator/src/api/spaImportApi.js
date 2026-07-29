@@ -2,6 +2,7 @@ const MOCK                 = import.meta.env.VITE_MOCK === 'true';
 const SPA_IMPORTS_URL      = import.meta.env.VITE_SPA_IMPORTS_URL      || '/api/GetSPAImports';
 const SPA_IMPORT_LINES_URL = import.meta.env.VITE_SPA_IMPORT_LINES_URL || '/api/GetSPAImportLines';
 const SUBMIT_SPA_URL       = import.meta.env.VITE_SUBMIT_SPA_URL       || '/api/SubmitSPAToD365';
+const DELETE_SPA_URL       = import.meta.env.VITE_DELETE_SPA_URL       || '/api/DeleteSPAImport';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -69,6 +70,19 @@ export async function submitSPAToD365(header, lines, importId) {
     body:    JSON.stringify({ header, lines, importId }),
   });
   const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+  return json;
+}
+
+export async function deleteSPAImport(id, spaId) {
+  if (MOCK) {
+    await sleep(300);
+    return { success: true };
+  }
+
+  const params = new URLSearchParams({ id, ...(spaId ? { spaId } : {}) });
+  const res    = await fetch(`${DELETE_SPA_URL}?${params}`, { method: 'DELETE' });
+  const json   = await res.json();
   if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
   return json;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSPAImports } from '../api/spaImportApi';
+import { getSPAImports, deleteSPAImport } from '../api/spaImportApi';
 import SPAImportDetail from './SPAImportDetail';
 
 const SPA_CODE_CLS = { PRPOC:'spa-code-prpoc', PRCLM:'spa-code-prclm', PPINF:'spa-code-ppinf', PEPOC:'spa-code-pepoc', PRINF:'spa-code-prinf' };
@@ -200,6 +200,7 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
   const [selected,       setSelected]       = useState(null);
   const [showImport,     setShowImport]     = useState(false);
   const [activePreset,   setActivePreset]   = useState(preset);
+  const [deletingId,     setDeletingId]     = useState(null);
 
   // Sync when preset prop changes (e.g. navigating from Dashboard)
   useEffect(() => { setActivePreset(preset); }, [preset]);
@@ -217,6 +218,20 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleDelete(e, item) {
+    e.stopPropagation();
+    if (!window.confirm(`Delete SPA import "${item.spaId || '(no ID)'}"? This cannot be undone.`)) return;
+    setDeletingId(item.id);
+    try {
+      await deleteSPAImport(item.id, item.spaId);
+      setItems(prev => prev.filter(i => i.id !== item.id));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   function handleUpdate(updated) {
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
@@ -325,11 +340,12 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
                 <th>Vendor Approval ID</th>
                 <th>Upload Date</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign:'center', color:'#9ca3af', padding:'40px 0' }}>No SPA records found.</td></tr>
+                <tr><td colSpan={10} style={{ textAlign:'center', color:'#9ca3af', padding:'40px 0' }}>No SPA records found.</td></tr>
               ) : filtered.map(item => (
                 <tr key={item.id} className="si-row so-hdr-row" onClick={() => setSelected(item)}>
                   <td><span style={{ color:'#1d4ed8', fontWeight:500 }}>{item.spaId || <span className="od-missing-badge">Missing</span>}</span></td>
@@ -351,6 +367,22 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
                     {item.createdOn ? new Date(item.createdOn).toLocaleDateString() : '—'}
                   </td>
                   <td><StatusBadge status={item.creationStatus}/></td>
+                  <td>
+                    <button
+                      className="si-delete-btn"
+                      title="Delete SPA import"
+                      disabled={deletingId === item.id}
+                      onClick={e => handleDelete(e, item)}
+                      style={{ background:'none', border:'none', cursor: deletingId === item.id ? 'default' : 'pointer', color:'#9ca3af', padding:4 }}
+                    >
+                      {deletingId === item.id
+                        ? <div className="cp-spinner-ring-sm" />
+                        : <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                      }
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
