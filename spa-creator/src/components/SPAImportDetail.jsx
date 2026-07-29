@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import { getSPAImportLines, submitSPAToD365 } from '../api/spaImportApi';
 
-const TEMPLATE_URL = import.meta.env.VITE_SPA_TEMPLATE_URL;
+const TEMPLATE_URL = import.meta.env.VITE_SPA_TEMPLATE_URL || '/api/GetSPATemplate';
 
 const EXT_MAP = {
   'application/pdf':                                                            { ext: '.pdf',  label: 'PDF'   },
