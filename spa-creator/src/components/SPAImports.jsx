@@ -312,7 +312,7 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
               <tr>
                 <th>SPA ID</th>
                 <th>SPA Code</th>
-                <th>Item</th>
+                <th>Description</th>
                 <th>Vendor</th>
                 <th>From Date</th>
                 <th>To Date</th>
