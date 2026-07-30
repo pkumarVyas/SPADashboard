@@ -30,13 +30,19 @@ module.exports = async function (context, req) {
       Accept: 'application/json',
     };
 
-    // Best-effort: remove associated agreement lines first. There is no lookup
-    // relationship — lines are matched on the document's SPA number, which lives on
-    // the header as vendorApprovalId (spaId kept as a fallback for older imports).
-    const keys = [req.query.vendorApprovalId, req.query.spaId].filter(Boolean);
-    if (keys.length) {
+    // Best-effort: remove associated agreement lines first. cr876_vysspaheaderid is a
+    // plain text column, not a Dataverse lookup, so nothing cascades — lines must be
+    // deleted explicitly or they are left orphaned. Older imports predate that column
+    // and are still matched on the SPA number.
+    const esc  = v => String(v).replace(/'/g, "''");
+    const ors  = [
+      `cr876_vysspaheaderid eq '${esc(id)}'`,
+      ...[req.query.vendorApprovalId, req.query.spaId].filter(Boolean)
+        .map(k => `crfc2_spaid eq '${esc(k)}'`),
+    ];
+    {
       try {
-        const clause   = keys.map(k => `crfc2_spaid eq '${k.replace(/'/g, "''")}'`).join(' or ');
+        const clause   = ors.join(' or ');
         const filter   = encodeURIComponent(clause);
         const linesUrl = `${DATAVERSE_API_URL}/crfc2_vysspaagreementlinetables?$select=crfc2_vysspaagreementlinetableid&$filter=${filter}`;
         const linesRes = await fetch(linesUrl, { headers });

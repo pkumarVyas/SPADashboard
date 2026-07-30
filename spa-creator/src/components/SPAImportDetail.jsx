@@ -68,7 +68,10 @@ function EditField({ label, value, onChange, type = 'text', span, mono, readOnly
     <div className="spi-field-card" style={span ? { gridColumn: `span ${span}` } : {}}>
       <div className="spi-field-label">{label}</div>
       {readOnly
-        ? <div className={`spi-field-value${mono ? ' spi-mono' : ''}`}>{value || <span className="spi-field-empty">—</span>}</div>
+        ? <>
+            <div className={`spi-field-value${mono ? ' spi-mono' : ''}`}>{value || <span className="spi-field-empty">—</span>}</div>
+            {hint && <div className="spi-field-hint">{hint}</div>}
+          </>
         : <>
             <input
               type={type}
@@ -194,12 +197,12 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
   useEffect(() => {
     let cancelled = false;
     setLinesLoad(true); setLinesErr(null);
-    getSPAImportLines(doc.spaId, doc.vendorApprovalId)
+    getSPAImportLines(doc.id, doc.spaId, doc.vendorApprovalId)
       .then(res => { if (!cancelled) setLines(res.value ?? []); })
       .catch(e  => { if (!cancelled) setLinesErr(e.message); })
       .finally(() => { if (!cancelled) setLinesLoad(false); });
     return () => { cancelled = true; };
-  }, [doc.spaId, doc.vendorApprovalId]);
+  }, [doc.id, doc.spaId, doc.vendorApprovalId]);
 
   const sm       = STATUS_META[status] ?? STATUS_META['Pending Review'];
   const cc       = SPA_CODE_COLORS[doc.spaCode] ?? { bg: '#f3f4f6', fg: '#374151' };
@@ -251,6 +254,10 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
   }
 
   async function handleSubmit() {
+    if (!editHeader.vendorApprovalId) {
+      setSubmitResult({ ok: false, text: 'Vendor Approval ID is missing — it is the document SPA number needed to locate this SPA in D365.' });
+      return;
+    }
     if (!editHeader.vendorId) { setSubmitResult({ ok: false, text: 'Vendor ID is required.' }); return; }
     if (!editHeader.startDate || !editHeader.endDate) { setSubmitResult({ ok: false, text: 'Start Date and End Date are required.' }); return; }
     setSubmitting(true);
@@ -566,11 +573,13 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
             <div className="spi-fields-grid">
               {editMode ? (
                 <>
-                  <EditField label="SPA ID" value={editHeader.spaId} mono onChange={v => setEditHeader(h => ({ ...h, spaId: v }))} placeholder="(auto-generate)" hint="Leave blank to use D365 number sequence" />
+                  <EditField label="SPA ID" value={editHeader.spaId} mono readOnly
+                    hint="Assigned by D365 F&amp;O from its number sequence" />
                   <EditField label="SPA Code"           value={editHeader.spaCode}           mono onChange={v => setEditHeader(h => ({ ...h, spaCode: v }))} />
                   <EditField label="Description"        value={editHeader.description}        span={2} onChange={v => setEditHeader(h => ({ ...h, description: v }))} />
                   <EditField label="Vendor ID"          value={editHeader.vendorId}          mono onChange={v => setEditHeader(h => ({ ...h, vendorId: v }))} />
-                  <EditField label="Vendor Approval ID" value={editHeader.vendorApprovalId}  mono onChange={v => setEditHeader(h => ({ ...h, vendorApprovalId: v }))} />
+                  <EditField label="Vendor Approval ID" value={editHeader.vendorApprovalId}  mono readOnly
+                    hint="Document SPA number — used to locate this SPA in D365" />
                   <EditField label="Start Date"         value={editHeader.startDate}         type="date" onChange={v => setEditHeader(h => ({ ...h, startDate: v }))} />
                   <EditField label="End Date"           value={editHeader.endDate}           type="date" onChange={v => setEditHeader(h => ({ ...h, endDate: v }))} />
                 </>

@@ -44,9 +44,9 @@ export async function getSPAImports({ filter = '' } = {}) {
   return json;
 }
 
-// Lines are correlated by the document's SPA number, which the flow writes to the
-// header's vendorApprovalId. spaId is sent too so pre-existing imports still resolve.
-export async function getSPAImportLines(spaId, vendorApprovalId) {
+// Staged lines join to their header on the header GUID (headerId). spaId and
+// vendorApprovalId are sent as fallbacks for imports predating that column.
+export async function getSPAImportLines(headerId, spaId, vendorApprovalId) {
   if (MOCK) {
     await sleep(300);
     const lines = MOCK_LINES[vendorApprovalId] ?? MOCK_LINES[spaId] ?? [];
@@ -54,6 +54,7 @@ export async function getSPAImportLines(spaId, vendorApprovalId) {
   }
 
   const params = new URLSearchParams();
+  if (headerId)         params.set('headerId', headerId);
   if (vendorApprovalId) params.set('vendorApprovalId', vendorApprovalId);
   if (spaId)            params.set('spaId', spaId);
   const res    = await fetch(`${SPA_IMPORT_LINES_URL}?${params}`);

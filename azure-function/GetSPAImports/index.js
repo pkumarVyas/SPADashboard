@@ -70,6 +70,25 @@ function mapHeader(r) {
   };
 }
 
+const D365_HEADER_ENTITY = process.env.D365_SPA_HEADER_ENTITY ?? 'mserp_vysspaheaderdataentities';
+
+// D365 F&O is the system of record for agreement data — the import flow creates the SPA
+// there and no longer fully populates the staging record. The staging row remains the
+// import registry (uploaded document, upload time, import status), so the two are merged:
+// D365 wins for agreement fields, staging fills any gap.
+async function fetchD365Headers(token, apiUrl, company) {
+  const filter = `mserp_dataareaid eq '${String(company).replace(/'/g, "''")}'`;
+  const url = `${apiUrl}/${D365_HEADER_ENTITY}`
+    + `?$select=mserp_spaid,mserp_spacode,mserp_description,mserp_vendorid,mserp_vendapproval,mserp_startdate,mserp_enddate`
+    + `&$filter=${encodeURIComponent(filter)}`;
+  const res = await fetch(url, FETCH_OPTS(token));
+  if (!res.ok) throw new Error(`D365 header lookup ${res.status}: ${await res.text()}`);
+  const { value = [] } = await res.json();
+  return new Map(value.filter(r => r.mserp_spaid).map(r => [r.mserp_spaid, r]));
+}
+
+const prefer = (d365, staged) => (d365 !== undefined && d365 !== null && d365 !== '') ? d365 : staged;
+
 module.exports = async function (context, req) {
   const origin = process.env.ALLOWED_ORIGIN || '*';
   const cors   = CORS(origin);
@@ -113,6 +132,29 @@ module.exports = async function (context, req) {
 
     const json = await res.json();
     let items  = (json.value ?? []).map(mapHeader);
+
+    // Overlay D365 agreement data. Best-effort: if D365 is unreachable the list still
+    // renders from staging rather than failing outright.
+    try {
+      const { DATAVERSE_COMPANY_ID = 'USMF' } = process.env;
+      const d365 = await fetchD365Headers(token, DATAVERSE_API_URL, DATAVERSE_COMPANY_ID);
+      items = items.map(i => {
+        const d = i.spaId ? d365.get(i.spaId) : null;
+        if (!d) return { ...i, inD365: false };
+        return {
+          ...i,
+          spaCode:          prefer(d.mserp_spacode,      i.spaCode),
+          description:      prefer(d.mserp_description,  i.description),
+          vendorId:         prefer(d.mserp_vendorid,     i.vendorId),
+          vendorApprovalId: prefer(d.mserp_vendapproval, i.vendorApprovalId),
+          startDate:        prefer(fmt(d.mserp_startdate), i.startDate),
+          endDate:          prefer(fmt(d.mserp_enddate),   i.endDate),
+          inD365:           true,
+        };
+      });
+    } catch (e) {
+      context.log.warn('D365 enrichment skipped:', e.message);
+    }
 
     const searchQ = (req.query.filter ?? '').toLowerCase();
     if (searchQ) {
