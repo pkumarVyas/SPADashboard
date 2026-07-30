@@ -58,9 +58,13 @@ module.exports = async function (context, req) {
     return;
   }
 
-  const spaId = req.query.spaId;
-  if (!spaId) {
-    context.res = { status: 400, headers: cors, body: { success: false, error: 'spaId is required' } };
+  // Lines carry the document's SPA number in crfc2_spaid — there is no lookup
+  // relationship to the header. That number now lands on the header as
+  // vendorApprovalId (spaId is only assigned on submit), so match on it first and
+  // fall back to spaId for records imported before that mapping change.
+  const keys = [req.query.vendorApprovalId, req.query.spaId].filter(Boolean);
+  if (!keys.length) {
+    context.res = { status: 400, headers: cors, body: { success: false, error: 'vendorApprovalId or spaId is required' } };
     return;
   }
 
@@ -68,7 +72,8 @@ module.exports = async function (context, req) {
     const token = await getDataverseToken();
     const { DATAVERSE_API_URL } = process.env;
 
-    const filter = encodeURIComponent(`crfc2_spaid eq '${spaId.replace(/'/g, "''")}'`);
+    const clause = keys.map(k => `crfc2_spaid eq '${k.replace(/'/g, "''")}'`).join(' or ');
+    const filter = encodeURIComponent(clause);
     const url    = `${DATAVERSE_API_URL}/crfc2_vysspaagreementlinetables?$select=${SELECT}&$filter=${filter}&$orderby=crfc2_itemid asc`;
 
     const res  = await fetch(url, FETCH_OPTS(token));

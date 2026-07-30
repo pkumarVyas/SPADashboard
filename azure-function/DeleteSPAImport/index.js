@@ -30,11 +30,14 @@ module.exports = async function (context, req) {
       Accept: 'application/json',
     };
 
-    // Best-effort: remove associated agreement lines first (matched by SPA ID, not a formal lookup)
-    const spaId = req.query.spaId;
-    if (spaId) {
+    // Best-effort: remove associated agreement lines first. There is no lookup
+    // relationship — lines are matched on the document's SPA number, which lives on
+    // the header as vendorApprovalId (spaId kept as a fallback for older imports).
+    const keys = [req.query.vendorApprovalId, req.query.spaId].filter(Boolean);
+    if (keys.length) {
       try {
-        const filter   = encodeURIComponent(`crfc2_spaid eq '${spaId.replace(/'/g, "''")}'`);
+        const clause   = keys.map(k => `crfc2_spaid eq '${k.replace(/'/g, "''")}'`).join(' or ');
+        const filter   = encodeURIComponent(clause);
         const linesUrl = `${DATAVERSE_API_URL}/crfc2_vysspaagreementlinetables?$select=crfc2_vysspaagreementlinetableid&$filter=${filter}`;
         const linesRes = await fetch(linesUrl, { headers });
         if (linesRes.ok) {

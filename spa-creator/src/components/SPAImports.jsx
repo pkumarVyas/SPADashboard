@@ -221,10 +221,11 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
 
   async function handleDelete(e, item) {
     e.stopPropagation();
-    if (!window.confirm(`Delete SPA import "${item.spaId || '(no ID)'}"? This cannot be undone.`)) return;
+    const label = item.spaId || item.vendorApprovalId || '(no ID)';
+    if (!window.confirm(`Delete SPA import "${label}"? This cannot be undone.`)) return;
     setDeletingId(item.id);
     try {
-      await deleteSPAImport(item.id, item.spaId);
+      await deleteSPAImport(item.id, item.spaId, item.vendorApprovalId);
       setItems(prev => prev.filter(i => i.id !== item.id));
     } catch (e) {
       setError(e.message);
@@ -260,6 +261,7 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
       i.spaId.toLowerCase().includes(q) ||
       (i.description ?? '').toLowerCase().includes(q) ||
       (i.vendorId ?? '').toLowerCase().includes(q) ||
+      (i.vendorApprovalId ?? '').toLowerCase().includes(q) ||
       (i.spaCode ?? '').toLowerCase().includes(q)
     );
 
@@ -348,7 +350,11 @@ export default function SPAImports({ onNavigate, preset = 'all' }) {
                 <tr><td colSpan={10} style={{ textAlign:'center', color:'#9ca3af', padding:'40px 0' }}>No SPA records found.</td></tr>
               ) : filtered.map(item => (
                 <tr key={item.id} className="si-row so-hdr-row" onClick={() => setSelected(item)}>
-                  <td><span style={{ color:'#1d4ed8', fontWeight:500 }}>{item.spaId || <span className="od-missing-badge">Missing</span>}</span></td>
+                  <td>
+                    {item.spaId
+                      ? <span style={{ color:'#1d4ed8', fontWeight:500 }}>{item.spaId}</span>
+                      : <span style={{ color:'#9ca3af', fontSize:'0.78rem', fontStyle:'italic' }}>Auto on submit</span>}
+                  </td>
                   <td>
                     {item.spaCode
                       ? <span className={`spa-code-badge ${SPA_CODE_CLS[item.spaCode] ?? ''}`}>{item.spaCode}</span>

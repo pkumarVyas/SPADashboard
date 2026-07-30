@@ -194,15 +194,18 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
   useEffect(() => {
     let cancelled = false;
     setLinesLoad(true); setLinesErr(null);
-    getSPAImportLines(doc.spaId)
+    getSPAImportLines(doc.spaId, doc.vendorApprovalId)
       .then(res => { if (!cancelled) setLines(res.value ?? []); })
       .catch(e  => { if (!cancelled) setLinesErr(e.message); })
       .finally(() => { if (!cancelled) setLinesLoad(false); });
     return () => { cancelled = true; };
-  }, [doc.spaId]);
+  }, [doc.spaId, doc.vendorApprovalId]);
 
   const sm       = STATUS_META[status] ?? STATUS_META['Pending Review'];
   const cc       = SPA_CODE_COLORS[doc.spaCode] ?? { bg: '#f3f4f6', fg: '#374151' };
+  // SPA ID is assigned by D365 on submit. Until then, identify the record by the
+  // document's SPA number, which the flow maps onto vendorApprovalId.
+  const displayId = doc.spaId || doc.vendorApprovalId || '(pending)';
   const fileMeta = getFileMeta(file.contentType);
   const isPdf    = file.contentType?.includes('pdf');
   const isExcel  = file.contentType?.includes('spreadsheet') || file.contentType?.includes('excel') || file.contentType === 'text/csv';
@@ -312,7 +315,7 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
             SPA Imports
           </button>
           <span className="od-topbar-sep" />
-          <span className="od-topbar-title">{doc.spaId}</span>
+          <span className="od-topbar-title">{displayId}</span>
           <span className="spi-topbar-status" style={{ background: sm.bg, color: sm.fg }}>
             <span style={{ background: sm.dot, width: 6, height: 6, borderRadius: '50%', display: 'inline-block' }} />
             {status}
@@ -506,7 +509,7 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
           <div className="spi-banner">
             <div className="spi-banner-top">
               <div>
-                <div className="spi-banner-id">{doc.spaId}</div>
+                <div className="spi-banner-id">{displayId}</div>
                 <div className="spi-banner-desc">{doc.description || 'No description'}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
@@ -573,7 +576,8 @@ export default function SPAImportDetail({ doc, onBack, onUpdate }) {
                 </>
               ) : (
                 <>
-                  <FieldCard label="SPA ID"             value={doc.spaId}            mono />
+                  <FieldCard label="SPA ID" mono
+                    value={doc.spaId || <span className="spi-field-empty">Auto-generated on submit</span>} />
                   <FieldCard label="SPA Code"           value={doc.spaCode}          mono />
                   <FieldCard label="Description"        value={doc.description}       span={2} />
                   <FieldCard label="Vendor ID"          value={doc.vendorId}          mono />

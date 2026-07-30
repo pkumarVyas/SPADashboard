@@ -44,14 +44,18 @@ export async function getSPAImports({ filter = '' } = {}) {
   return json;
 }
 
-export async function getSPAImportLines(spaId) {
+// Lines are correlated by the document's SPA number, which the flow writes to the
+// header's vendorApprovalId. spaId is sent too so pre-existing imports still resolve.
+export async function getSPAImportLines(spaId, vendorApprovalId) {
   if (MOCK) {
     await sleep(300);
-    const lines = MOCK_LINES[spaId] ?? [];
+    const lines = MOCK_LINES[vendorApprovalId] ?? MOCK_LINES[spaId] ?? [];
     return { success: true, count: lines.length, value: lines };
   }
 
-  const params = new URLSearchParams({ spaId });
+  const params = new URLSearchParams();
+  if (vendorApprovalId) params.set('vendorApprovalId', vendorApprovalId);
+  if (spaId)            params.set('spaId', spaId);
   const res    = await fetch(`${SPA_IMPORT_LINES_URL}?${params}`);
   const json   = await res.json();
   if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
@@ -74,13 +78,15 @@ export async function submitSPAToD365(header, lines, importId) {
   return json;
 }
 
-export async function deleteSPAImport(id, spaId) {
+export async function deleteSPAImport(id, spaId, vendorApprovalId) {
   if (MOCK) {
     await sleep(300);
     return { success: true };
   }
 
-  const params = new URLSearchParams({ id, ...(spaId ? { spaId } : {}) });
+  const params = new URLSearchParams({ id });
+  if (vendorApprovalId) params.set('vendorApprovalId', vendorApprovalId);
+  if (spaId)            params.set('spaId', spaId);
   const res    = await fetch(`${DELETE_SPA_URL}?${params}`, { method: 'DELETE' });
   const json   = await res.json();
   if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
